@@ -9,6 +9,7 @@ external internet download of Node/Rust toolchains.
 """
 
 import hashlib
+import argparse
 import json
 import os
 import re
@@ -25,12 +26,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(os.environ.get("AIDICT_APP_ROOT", str(Path(__file__).resolve().parent.parent)))
 DATA_DIR = Path(os.environ.get("AIDICT_DATA_DIR", str(ROOT_DIR / "data")))
 USER_DATA_DIR = Path(os.environ.get("AIDICT_USER_DATA_DIR", str(DATA_DIR)))
 DICT_DB_PATH = DATA_DIR / "dictionary.db"
 USER_DB_PATH = USER_DATA_DIR / "user_data.db"
-NATIVE_BRIDGE_BIN = DATA_DIR / "macos_native_bridge"
+NATIVE_BRIDGE_BIN = Path(os.environ.get("AIDICT_NATIVE_BRIDGE", str(DATA_DIR / "macos_native_bridge")))
 UI_HTML_PATH = ROOT_DIR / "src" / "index.html"
 
 PROMPT_TEMPLATE_VERSION = "prompt_v1.0_hymt2"
@@ -115,7 +116,7 @@ def _cached_core_lookup(q_lower: str, q_raw: str):
                 WHERE dictionary_fts MATCH ?
                 LIMIT 5
                 """,
-                (f'"{q_raw}"',),
+                ('"' + q_raw.replace('"', '""') + '"',),
             )
             zh_rows = cur.fetchall()
             if zh_rows:
@@ -246,7 +247,7 @@ def save_word_rpc(payload: dict) -> dict:
                 ELSE saved_words.summary_snapshot
             END,
             note = CASE
-                WHEN ? IS NOT NULL AND ? != '' THEN ?
+                WHEN ? IS NOT NULL THEN ?
                 ELSE saved_words.note
             END
         """,
@@ -262,7 +263,6 @@ def save_word_rpc(payload: dict) -> dict:
             tags_json,
             now,
             now,
-            note,
             note,
             note,
         ),
@@ -751,11 +751,13 @@ def translate_rpc(payload: dict) -> dict:
 def get_native_bridge_report() -> dict:
     if STATE.cached_bridge_report is not None:
         return STATE.cached_bridge_report
-    if NATIVE_BRIDGE_BIN.exists():
-        res = subprocess.run([str(NATIVE_BRIDGE_BIN)], capture_output=True, text=True, timeout=60)
-        if res.returncode == 0 and res.stdout.strip():
-            STATE.cached_bridge_report = json.loads(res.stdout)
-            return STATE.cached_bridge_report
+    if sys.platform == 'darwin' and NATIVE_BRIDGE_BIN.exists():
+        try:
+            res = subprocess.run([str(NATIVE_BRIDGE_BIN)], capture_output=True, text=True, timeout=60)
+            if res.returncode == 0 and res.stdout.strip():
+                return json.loads(res.stdout)
+        except (OSError, subprocess.TimeoutExpired, ValueError):
+            pass
     return {"status": "unavailable"}
 
 
@@ -797,7 +799,7 @@ class DictionaryRequestHandler(BaseHTTPRequestHandler):
             rel = parsed.path[len("/stitch/"):].strip("/")
             stitch_base = ROOT_DIR / "design" / "stitch_export" / "stitch_desktop_dictionary_app"
             target_file = (stitch_base / rel).resolve()
-            if str(target_file).startswith(str(stitch_base.resolve())) and target_file.is_file():
+            if stitch_base.resolve() in target_file.parents and target_file.is_file():
                 data = target_file.read_bytes()
                 ctype = "text/html; charset=utf-8" if target_file.suffix == ".html" else "text/plain; charset=utf-8"
                 self.send_response(200)
@@ -861,9 +863,18 @@ class DictionaryRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
-        length = int(self.headers.get("Content-Length", "0"))
-        raw_body = self.rfile.read(length).decode("utf-8") if length > 0 else "{}"
-        payload = json.loads(raw_body or "{}")
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if length < 0 or length > 2 * 1024 * 1024:
+                self._send_json({"error": "Request too large"}, status=413)
+                return
+            raw_body = self.rfile.read(length).decode("utf-8") if length > 0 else "{}"
+            payload = json.loads(raw_body or "{}")
+            if not isinstance(payload, dict):
+                raise ValueError("Expected JSON object")
+        except (ValueError, UnicodeError):
+            self._send_json({"error": "Invalid JSON object"}, status=400)
+            return
 
         if parsed.path == "/api/wordbook":
             saved = save_word_rpc(payload)
@@ -947,9 +958,9 @@ class DictionaryRequestHandler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    # Warm up native bridge cache once at startup
-    _ = get_native_bridge_report()
-    port = int(os.environ.get("PORT", "1420"))
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--port', type=int, default=int(os.environ.get("PORT", "1420")))
+    port = parser.parse_args().port
     server = ThreadingHTTPServer(("127.0.0.1", port), DictionaryRequestHandler)
     print(f"[AI Dictionary] Local RPC & UI Server listening on http://127.0.0.1:{port}", flush=True)
     server.serve_forever()

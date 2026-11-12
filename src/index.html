@@ -381,6 +381,7 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      min-width: 0;
     }
 
     header {
@@ -451,6 +452,8 @@
     .viewport {
       flex: 1;
       overflow-y: auto;
+      scrollbar-gutter: stable;
+      min-height: 0;
       padding: 24px;
     }
 
@@ -543,7 +546,7 @@
     /* Two-column translation layout */
     .trans-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 16px;
     }
 
@@ -1074,7 +1077,7 @@
             <p style="font-size:12.5px; color:var(--text-sub); margin-bottom:14px;">
               同时适配 macOS 顶部菜单栏 (`NSStatusItem` + `NSPopover`) 与 Windows 右下角系统托盘 (`NotifyIcon` + 置顶迷你窗)。
             </p>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; font-size:13.5px;">
+            <div style="display:grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap:12px; font-size:13.5px;">
               <label style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--bg-input); border-radius:8px; border:1px solid var(--border); cursor:pointer;">
                 <span>点击关闭按钮 (×) 时最小化到信息栏/托盘（不退出应用）</span>
                 <input type="checkbox" id="settingCloseToTray" checked onchange="updateCloseToTraySetting(this.checked)" />
@@ -1136,7 +1139,7 @@
           <!-- Card 3: Global Shortcuts -->
           <div class="card">
             <h2 style="font-size:17px; font-weight:700; margin-bottom:12px;">全局快捷键设置</h2>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; font-size:13.5px;">
+            <div style="display:grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap:12px; font-size:13.5px;">
               <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--bg-input); border-radius:8px; border:1px solid var(--border);">
                 <span>划词查词快捷键</span>
                 <input id="hotkeyLookupInput" type="text" value="Option+Command+T" style="width:160px; height:32px; text-align:center;" />
@@ -1183,6 +1186,11 @@
 
   <script>
     let currentEntry = null;
+    let miniEntry = null;
+    let lookupGeneration = 0;
+    let miniGeneration = 0;
+    let wordbookGeneration = 0;
+    let toastTimer;
     let latestOcrLines = [];
     let currentTranslationReqId = '';
     let trayState = {
@@ -1202,14 +1210,21 @@
         if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeShell) {
           window.webkit.messageHandlers.nativeShell.postMessage(payload);
         }
+        else if (window.chrome?.webview) window.chrome.webview.postMessage(payload);
       } catch (e) {}
     }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]));
+    }
+    function jsArg(value) { return escapeHtml(JSON.stringify(String(value ?? ''))); }
 
     function showToast(msg) {
       const t = document.getElementById('actionToast');
       t.innerText = msg;
       t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 2400);
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
     }
 
     function toggleColorMode() {
@@ -1259,7 +1274,11 @@
     window.switchTab = function(tabId) {
       const map = { settings: 'models', dictionary: 'dictionary', translate: 'translate', ocr: 'ocr', wordbook: 'wordbook', history: 'history', models: 'models' };
       const target = map[tabId] || 'dictionary';
-      restoreMainWindowFromTray(target);
+      // Native callbacks must never post showMainWindow back to the host.
+      window.onRestoreFromTray();
+      closeYoudaoMiniPopover();
+      hideTrayContextMenu();
+      switchPage(target, document.getElementById('nav-' + target));
     };
 
     window.focusMiniInput = function() {
@@ -1286,7 +1305,7 @@
     }
 
     function closeYoudaoMiniPopover() {
-      if (document.body.classList.contains('tray-only-mode')) return;
+      if (document.body.classList.contains('tray-only-mode')) { postToNativeShell({action: 'closeMiniPopover'}); return; }
       document.getElementById('youdaoMiniPopover').classList.remove('show');
     }
 
@@ -1305,6 +1324,8 @@
     }
 
     async function runTrayMiniQuery() {
+      const generation = ++miniGeneration;
+      miniEntry = null;
       const q = (document.getElementById('trayMiniInput')?.value || '').trim();
       const box = document.getElementById('trayMiniResultBody');
       if (!q || !box) return;
@@ -1314,29 +1335,30 @@
       if (!isSentence) {
         const res = await fetch('/api/lookup?q=' + encodeURIComponent(q));
         const data = await res.json();
+        if (generation !== miniGeneration) return;
         if (data.found && data.entry) {
           const e = data.entry;
-          currentEntry = e;
+          miniEntry = e;
           const sensesHtml = e.senses.slice(0, 4).map(s => `
             <div style="padding:5px 0; border-bottom:1px dashed var(--border);">
-              <span class="pos-badge">${s.pos}</span>
-              <strong>${s.zh}</strong>
+              <span class="pos-badge">${escapeHtml(s.pos)}</span>
+              <strong>${escapeHtml(s.zh)}</strong>
             </div>
           `).join('');
           box.innerHTML = `
             <div>
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
                 <div>
-                  <strong style="font-size:20px;">${e.lemma}</strong>
+                  <strong style="font-size:20px;">${escapeHtml(e.lemma)}</strong>
                   <span class="tag green" style="margin-left:6px;">${data.elapsed_ms} ms</span>
                 </div>
-                <button class="btn btn-primary" style="height:26px; padding:0 10px; font-size:12px;" onclick="saveCurrentEntry()">⭐ 收藏</button>
+                <button class="btn btn-primary" style="height:26px; padding:0 10px; font-size:12px;" onclick="saveCurrentEntry(miniEntry)">⭐ 收藏</button>
               </div>
               <div style="display:flex; gap:8px; align-items:center; font-size:12.5px; color:var(--text-sub); margin-bottom:8px;">
-                ${e.ipa_uk ? `<span>英 <code>${e.ipa_uk}</code></span>` : ''}
-                <button class="btn" style="height:24px; padding:0 8px; font-size:11.5px;" onclick="speakWord('${e.lemma}', 'uk')">🔊 英</button>
-                ${e.ipa_us ? `<span>美 <code>${e.ipa_us}</code></span>` : ''}
-                <button class="btn" style="height:24px; padding:0 8px; font-size:11.5px;" onclick="speakWord('${e.lemma}', 'us')">🔊 美</button>
+                ${e.ipa_uk ? `<span>英 <code>${escapeHtml(e.ipa_uk)}</code></span>` : ''}
+                <button class="btn" style="height:24px; padding:0 8px; font-size:11.5px;" onclick="speakWord(${jsArg(e.lemma)}, 'uk')">🔊 英</button>
+                ${e.ipa_us ? `<span>美 <code>${escapeHtml(e.ipa_us)}</code></span>` : ''}
+                <button class="btn" style="height:24px; padding:0 8px; font-size:11.5px;" onclick="speakWord(${jsArg(e.lemma)}, 'us')">🔊 美</button>
               </div>
               <div>${sensesHtml}</div>
             </div>
@@ -1358,10 +1380,11 @@
         })
       });
       const tData = await tRes.json();
+      if (generation !== miniGeneration) return;
       box.innerHTML = `
         <div style="padding:10px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px;">
           <div style="font-size:11.5px; color:var(--text-sub); margin-bottom:4px;">本地 Hy-MT2 即时翻译 (${tData.elapsed_ms || 0} ms)</div>
-          <div style="font-weight:600; font-size:14px;">${tData.translated_text || tData.message || ''}</div>
+          <div style="font-weight:600; font-size:14px;">${escapeHtml(tData.translated_text || tData.message || '')}</div>
         </div>
       `;
     }
@@ -1470,26 +1493,28 @@
     }
 
     async function performLookup() {
+      const generation = ++lookupGeneration;
       const q = document.getElementById('dictSearchInput').value.trim();
       if (!q) return;
       const res = await fetch('/api/lookup?q=' + encodeURIComponent(q));
       const data = await res.json();
+      if (generation !== lookupGeneration) return;
       const col = document.getElementById('dictMainColumn');
 
       if (!data.found) {
         currentEntry = null;
         const suggHtml = (data.suggestions || []).map(s =>
-          `<button class="btn" style="height:30px; font-size:12.5px;" onclick="quickSelectWord('${s}')">${s}</button>`
+          `<button class="btn" style="height:30px; font-size:12.5px;" onclick="quickSelectWord(${jsArg(s)})">${escapeHtml(s)}</button>`
         ).join(' ');
         col.innerHTML = `
           <div class="card">
-            <h3 style="font-size:18px; margin-bottom:8px;">词典中未找到：${data.query}</h3>
+            <h3 style="font-size:18px; margin-bottom:8px;">词典中未找到：${escapeHtml(data.query)}</h3>
             <p style="font-size:13.5px; color:var(--text-sub); margin-bottom:12px;">
               您可以尝试以下相近单词，或直接使用本地 AI 翻译该内容：
             </p>
             <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">${suggHtml}</div>
-            <button class="btn btn-primary" onclick="document.getElementById('transStudioInput').value='${data.query}'; switchPage('translate', document.getElementById('nav-translate')); runStudioTranslation();">
-              使用 AI 翻译「${data.query}」
+            <button class="btn btn-primary" onclick="document.getElementById('transStudioInput').value=${jsArg(data.query)}; switchPage('translate', document.getElementById('nav-translate')); runStudioTranslation();">
+              使用 AI 翻译「${escapeHtml(data.query)}」
             </button>
           </div>
         `;
@@ -1501,21 +1526,21 @@
 
       const sensesHtml = e.senses.map(s => `
         <div class="sense-row">
-          <span class="pos-badge">${s.pos}</span>
-          ${s.domain ? `<span class="tag blue" style="margin-right:6px;">${s.domain}</span>` : ''}
-          <strong style="font-size:15px;">${s.zh}</strong>
-          ${s.en ? `<div style="color:var(--text-sub); font-size:13.5px; margin-top:3px; padding-left:46px;">${s.en}</div>` : ''}
+          <span class="pos-badge">${escapeHtml(s.pos)}</span>
+          ${s.domain ? `<span class="tag blue" style="margin-right:6px;">${escapeHtml(s.domain)}</span>` : ''}
+          <strong style="font-size:15px;">${escapeHtml(s.zh)}</strong>
+          ${s.en ? `<div style="color:var(--text-sub); font-size:13.5px; margin-top:3px; padding-left:46px;">${escapeHtml(s.en)}</div>` : ''}
         </div>
       `).join('');
 
       const formsPairs = Object.entries(e.forms || {}).map(([k, v]) =>
-        `<button class="btn" style="height:26px; padding:0 8px; font-size:12px;" onclick="quickSelectWord('${v}')">${k}: ${v}</button>`
+        `<button class="btn" style="height:26px; padding:0 8px; font-size:12px;" onclick="quickSelectWord(${jsArg(v)})">${escapeHtml(k)}: ${escapeHtml(v)}</button>`
       ).join(' ');
 
       const examplesHtml = (e.examples || []).map(ex => `
         <div style="padding:10px 12px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; margin-top:8px; font-size:13.5px;">
-          <div style="font-weight:500;">${ex.en}</div>
-          <div style="color:var(--text-sub); margin-top:3px;">${ex.zh}</div>
+          <div style="font-weight:500;">${escapeHtml(ex.en)}</div>
+          <div style="color:var(--text-sub); margin-top:3px;">${escapeHtml(ex.zh)}</div>
         </div>
       `).join('');
 
@@ -1524,20 +1549,20 @@
           <div class="word-title-row">
             <div>
               <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                <span class="headword">${e.lemma}</span>
+                <span class="headword">${escapeHtml(e.lemma)}</span>
                 <span class="tag green">${data.elapsed_ms} ms</span>
-                ${e.matched_via !== 'exact' ? `<span class="tag blue">词形还原: ${e.matched_via}</span>` : ''}
+                ${e.matched_via !== 'exact' ? `<span class="tag blue">词形还原: ${escapeHtml(e.matched_via)}</span>` : ''}
               </div>
               <div class="phonetics-row">
-                ${e.ipa_uk ? `<span>英 <code>${e.ipa_uk}</code></span>` : ''}
-                <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="speakWord('${e.lemma}', 'uk')">🔊 英音</button>
-                ${e.ipa_us ? `<span>美 <code>${e.ipa_us}</code></span>` : ''}
-                <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="speakWord('${e.lemma}', 'us')">🔊 美音</button>
+                ${e.ipa_uk ? `<span>英 <code>${escapeHtml(e.ipa_uk)}</code></span>` : ''}
+                <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="speakWord(${jsArg(e.lemma)}, 'uk')">🔊 英音</button>
+                ${e.ipa_us ? `<span>美 <code>${escapeHtml(e.ipa_us)}</code></span>` : ''}
+                <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="speakWord(${jsArg(e.lemma)}, 'us')">🔊 美音</button>
               </div>
             </div>
             <div style="display:flex; gap:8px;">
               <button class="btn btn-primary" onclick="saveCurrentEntry()">⭐ 加入生词本</button>
-              <button class="btn" onclick="navigator.clipboard.writeText('${e.lemma}'); showToast('已复制单词');">复制</button>
+              <button class="btn" onclick="navigator.clipboard.writeText(${jsArg(e.lemma)}); showToast('已复制单词');">复制</button>
             </div>
           </div>
 
@@ -1552,7 +1577,7 @@
       document.getElementById('pillHeadword').innerText = e.lemma;
       document.getElementById('pillIpa').innerText = e.ipa_us || '';
       document.getElementById('pillSensesBox').innerHTML = e.senses.slice(0, 3).map(s =>
-        `<div><span class="pos-badge">${s.pos}</span> ${s.zh}</div>`
+        `<div><span class="pos-badge">${escapeHtml(s.pos)}</span> ${escapeHtml(s.zh)}</div>`
       ).join('');
     }
 
@@ -1564,23 +1589,22 @@
       });
     }
 
-    async function saveCurrentEntry() {
-      if (!currentEntry) return;
-      const summary = currentEntry.senses.map(s => `${s.pos} ${s.zh}`).join('；');
+    async function saveCurrentEntry(entry = currentEntry) {
+      if (!entry) return;
+      const summary = entry.senses.map(s => `${escapeHtml(s.pos)} ${escapeHtml(s.zh)}`).join('；');
       await fetch('/api/wordbook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          entry_id: currentEntry.id,
-          source_text: currentEntry.lemma,
-          source_lang: currentEntry.lang,
+          entry_id: entry.id,
+          source_text: entry.lemma,
+          source_lang: entry.lang,
           target_lang: 'zh',
           summary_snapshot: summary,
-          source_id: currentEntry.source_id,
-          note: ''
+          source_id: entry.source_id
         })
       });
-      showToast(`已将「${currentEntry.lemma}」加入生词本`);
+      showToast(`已将「${entry.lemma}」加入生词本`);
       loadWordbook();
     }
 
@@ -1610,13 +1634,14 @@
       const target_lang = document.getElementById('transTargetLang').value;
       const preserve_format = document.getElementById('preserveFormatCheckbox').checked;
       const glossary = parseGlossaryInput();
-      currentTranslationReqId = 'req-' + Date.now();
+      const requestId = crypto.randomUUID();
+      currentTranslationReqId = requestId;
 
       const res = await fetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          request_id: currentTranslationReqId,
+          request_id: requestId,
           text,
           source_lang,
           target_lang,
@@ -1626,6 +1651,7 @@
       });
       const data = await res.json();
       const out = document.getElementById('transStudioOutput');
+      if (currentTranslationReqId !== requestId || data.status === 'cancelled') return;
       const badge = document.getElementById('transAc10StatusBadge');
 
       if (data.status === 'model_not_installed') {
@@ -1639,6 +1665,7 @@
 
     async function cancelStudioTranslation() {
       const reqId = currentTranslationReqId || 'manual-cancel';
+      currentTranslationReqId = '';
       await fetch('/api/translate/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1665,7 +1692,7 @@
       document.getElementById('ocrRecognizedList').innerHTML = latestOcrLines.map((l, idx) => `
         <div style="display:flex; align-items:center; gap:10px;">
           <span class="tag">第 ${idx + 1} 行</span>
-          <input type="text" value="${l.text}" class="ocr-editable-line" style="flex:1;" />
+          <input type="text" value="${escapeHtml(l.text)}" class="ocr-editable-line" style="flex:1;" />
         </div>
       `).join('');
 
@@ -1683,11 +1710,13 @@
     }
 
     async function loadWordbook(searchQuery = '') {
+      const generation = ++wordbookGeneration;
       const url = searchQuery
         ? '/api/wordbook?q=' + encodeURIComponent(searchQuery)
         : '/api/wordbook';
       const res = await fetch(url);
       const data = await res.json();
+      if (generation !== wordbookGeneration) return;
       document.getElementById('sidebarWordCount').innerText = data.items.length;
       const tbody = document.getElementById('wordbookGridBody');
       if (!data.items.length) {
@@ -1696,13 +1725,13 @@
       }
       tbody.innerHTML = data.items.map(item => `
         <tr>
-          <td><a href="javascript:void(0)" style="color:var(--primary); font-weight:700; text-decoration:none;" onclick="quickSelectWord('${item.source_text}')">${item.source_text}</a></td>
+          <td><a href="javascript:void(0)" style="color:var(--primary); font-weight:700; text-decoration:none;" onclick="quickSelectWord(${jsArg(item.source_text)})">${escapeHtml(item.source_text)}</a></td>
           <td><span class="tag green">Lv.${item.mastery_level || 1}</span></td>
-          <td>${item.summary_snapshot}</td>
-          <td style="cursor:pointer; color:var(--primary);" onclick="editWordNote('${item.source_text}', '${(item.note || '').replace(/'/g, "\\'")}')">${item.note || '+ 添加备注'}</td>
+          <td>${escapeHtml(item.summary_snapshot)}</td>
+          <td style="cursor:pointer; color:var(--primary);" onclick="editWordNote(${jsArg(item.source_text)}, ${jsArg(item.note)})">${escapeHtml(item.note || '+ 添加备注')}</td>
           <td>
-            <button class="btn" style="height:26px; padding:0 8px; font-size:12px;" onclick="markWordMastered('${item.source_text}')">已掌握</button>
-            <button class="btn btn-danger" style="height:26px; padding:0 8px; font-size:12px;" onclick="deleteWordFromBook('${item.source_text}')">删除</button>
+            <button class="btn" style="height:26px; padding:0 8px; font-size:12px;" onclick="markWordMastered(${jsArg(item.source_text)})">已掌握</button>
+            <button class="btn btn-danger" style="height:26px; padding:0 8px; font-size:12px;" onclick="deleteWordFromBook(${jsArg(item.source_text)})">删除</button>
           </td>
         </tr>
       `).join('');
@@ -1782,9 +1811,9 @@
       }
       tbody.innerHTML = data.items.map(item => `
         <tr>
-          <td><span class="tag">${item.kind}</span></td>
-          <td style="font-weight:600;">${item.input_text}</td>
-          <td style="color:var(--text-sub);">${item.result_excerpt}</td>
+          <td><span class="tag">${escapeHtml(item.kind)}</span></td>
+          <td style="font-weight:600;">${escapeHtml(item.input_text)}</td>
+          <td style="color:var(--text-sub);">${escapeHtml(item.result_excerpt)}</td>
           <td style="color:var(--text-muted); font-size:12px;">${item.created_at.slice(0, 19).replace('T', ' ')}</td>
         </tr>
       `).join('');
@@ -1836,15 +1865,15 @@
         return `
           <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px;">
             <div>
-              <strong>${m.model_name} (${m.quant})</strong>
+              <strong>${escapeHtml(m.model_name)} (${escapeHtml(m.quant)})</strong>
               ${m.is_active ? '<span class="tag green" style="margin-left:6px;">当前启用</span>' : ''}
               <div style="font-size:12px; color:var(--text-sub); margin-top:2px;">文件大小: ${sizeGb} · 推荐内存: ${m.recommended_ram_gb} GB</div>
             </div>
             <div style="display:flex; gap:8px;">
               ${!isReady
-                ? `<button class="btn btn-primary" onclick="updateModel('${m.id}', 'install_and_verify')">启用模型</button>`
-                : `<button class="btn" onclick="updateModel('${m.id}', 'activate')">设为默认</button>
-                   <button class="btn btn-danger" onclick="updateModel('${m.id}', 'uninstall')">卸载</button>`
+                ? `<button class="btn btn-primary" onclick="updateModel(${jsArg(m.id)}, 'install_and_verify')">启用模型</button>`
+                : `<button class="btn" onclick="updateModel(${jsArg(m.id)}, 'activate')">设为默认</button>
+                   <button class="btn btn-danger" onclick="updateModel(${jsArg(m.id)}, 'uninstall')">卸载</button>`
               }
             </div>
           </div>
@@ -1871,6 +1900,8 @@
         if (typeof s.screen_selection_enabled === 'boolean') trayState.screen_selection_enabled = s.screen_selection_enabled;
         if (typeof s.clipboard_capture_enabled === 'boolean') trayState.clipboard_capture_enabled = s.clipboard_capture_enabled;
         syncTrayUI();
+        postToNativeShell({action: 'setCloseToTray', enabled: trayState.close_to_tray});
+        postToNativeShell({action: 'syncState', ...trayState});
       } catch (e) {}
     }
 
@@ -1907,8 +1938,8 @@
     });
 
     // Startup initialization
-    performLookup();
-    runTrayMiniQuery();
+    if (document.body.classList.contains('tray-only-mode')) runTrayMiniQuery();
+    else performLookup();
     loadModels();
     loadWordbook();
     loadDictStats();

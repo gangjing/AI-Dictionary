@@ -27,7 +27,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
         setupMainMenu()
         setupMainWindow()
         setupYoudaoStyleStatusBar()
-        waitForServerAndLoad(retries: 35)
+        waitForServerAndLoad(retries: 150)
     }
 
     func setupMainMenu() {
@@ -89,7 +89,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
         popover = NSPopover()
         popover.contentSize = NSSize(width: 390, height: 500)
         popover.behavior = .transient
-        popover.animates = true
+        popover.animates = false
 
         let popVC = NSViewController()
         let popConfig = WKWebViewConfiguration()
@@ -237,7 +237,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
             sender.orderOut(nil)
             return false
         }
-        return true
+        explicitQuitAction()
+        return false
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -261,10 +262,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
         case "showMainWindow":
             showMainWindowAction()
             if let tab = body["tab"] as? String {
-                webView.evaluateJavaScript("if(window.switchTab) window.switchTab('\(tab)');", completionHandler: nil)
+                let allowedTabs = ["dictionary", "translate", "ocr", "wordbook", "history", "models", "settings"]
+                if allowedTabs.contains(tab) {
+                    webView.evaluateJavaScript("if(window.switchTab) window.switchTab('\(tab)');", completionHandler: nil)
+                }
             }
         case "toggleMiniPopover":
             togglePopoverAction()
+        case "closeMiniPopover":
+            popover.performClose(nil)
         case "setCloseToTray":
             if let enabled = body["enabled"] as? Bool {
                 closeToTray = enabled
@@ -292,27 +298,39 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
     func startBackendDaemon() {
         guard let resourcePath = Bundle.main.resourcePath else { return }
         let serverScript = (resourcePath as NSString).appendingPathComponent("app/scripts/run_local_server.py")
-        let dataDir = (resourcePath as NSString).appendingPathComponent("app/data")
+        let bundledDataDir = (resourcePath as NSString).appendingPathComponent("app/data")
 
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let userDir = appSupport.appendingPathComponent("AIDictionary", isDirectory: true)
         try? FileManager.default.createDirectory(at: userDir, withIntermediateDirectories: true)
 
-        let bundledUserDb = URL(fileURLWithPath: dataDir).appendingPathComponent("user_data.db")
+        let bundledUserDb = URL(fileURLWithPath: bundledDataDir).appendingPathComponent("user_data.db")
         let writableUserDb = userDir.appendingPathComponent("user_data.db")
         if !FileManager.default.fileExists(atPath: writableUserDb.path) {
             try? FileManager.default.copyItem(at: bundledUserDb, to: writableUserDb)
         }
 
+        let writableDictionary = userDir.appendingPathComponent("dictionary.db")
+        if !FileManager.default.fileExists(atPath: writableDictionary.path) {
+            try? FileManager.default.copyItem(at: URL(fileURLWithPath: bundledDataDir).appendingPathComponent("dictionary.db"), to: writableDictionary)
+        }
         let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-        proc.arguments = [serverScript]
+        proc.executableURL = URL(fileURLWithPath: (resourcePath as NSString).appendingPathComponent("app/backend/AIDictionaryServer"))
+        proc.arguments = ["--port", String(serverPort)]
         var env = ProcessInfo.processInfo.environment
         env["PORT"] = String(serverPort)
-        env["AIDICT_DATA_DIR"] = dataDir
+        env["AIDICT_DATA_DIR"] = userDir.path
+        env["AIDICT_APP_ROOT"] = (resourcePath as NSString).appendingPathComponent("app")
+        env["AIDICT_NATIVE_BRIDGE"] = (bundledDataDir as NSString).appendingPathComponent("macos_native_bridge")
         env["AIDICT_USER_DATA_DIR"] = userDir.path
         proc.environment = env
-        try? proc.run()
+        do { try proc.run() } catch {
+            let alert = NSAlert()
+            alert.messageText = "AI Dictionary 后端启动失败"
+            alert.informativeText = error.localizedDescription
+            alert.runModal()
+            NSApp.terminate(nil)
+        }
         self.serverProcess = proc
     }
 
@@ -324,6 +342,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
                 DispatchQueue.main.async {
                     self.webView.load(URLRequest(url: mainUrl))
                     self.popoverWebView.load(URLRequest(url: trayUrl))
+                }
+            } else if retries == 0 {
+                DispatchQueue.main.async {
+                    let alert = NSAlert()
+                    alert.messageText = "无法连接本地词典服务"
+                    alert.informativeText = "请检查是否已经打开另一份 AI Dictionary，关闭后重试。"
+                    alert.runModal()
+                    NSApp.terminate(nil)
                 }
             } else if retries > 0 {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {

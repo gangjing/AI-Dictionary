@@ -5,6 +5,7 @@
 # - Double-click tray icon: Restores the Main AI Dictionary window.
 # - Right-click tray icon: Opens the full Youdao-style ContextMenuStrip (Screen Selection, Clipboard Capture, OCR, Privacy Mode, Settings, Explicit Exit).
 
+$ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
@@ -20,12 +21,64 @@ $Port = 14205
 $MainUrl = "http://127.0.0.1:$Port/"
 $TrayUrl = "http://127.0.0.1:$Port/?mode=tray"
 
-# Start local Python backend daemon hidden
-$ServerScript = Join-Path $ScriptDir "run_local_server.py"
-$Env:PORT = "$Port"
-$ServerProc = Start-Process -FilePath "python" -ArgumentList "`"$ServerScript`" --port $Port" -WindowStyle Hidden -PassThru -ErrorAction SilentlyContinue
-
-Start-Sleep -Milliseconds 650
+# Keep mutable databases outside the installation directory across upgrades.
+$UserDir = Join-Path $env:LOCALAPPDATA "AIDictionary"
+New-Item -ItemType Directory -Force -Path $UserDir | Out-Null
+foreach ($Db in @("dictionary.db", "user_data.db")) {
+    if (-not (Test-Path (Join-Path $UserDir $Db))) {
+        Copy-Item -LiteralPath (Join-Path $AppRoot "data\$Db") -Destination (Join-Path $UserDir $Db)
+    }
+}
+$env:AIDICT_DATA_DIR = $UserDir
+$env:AIDICT_USER_DATA_DIR = $UserDir
+$env:AIDICT_APP_ROOT = $AppRoot
+$env:PORT = "$Port"
+$BackendExe = Join-Path $AppRoot "backend\AIDictionaryServer.exe"
+$ServerProc = Start-Process -FilePath $BackendExe -ArgumentList "--port $Port" -WindowStyle Hidden -PassThru
+$Ready = $false
+for ($Attempt = 0; $Attempt -lt 100; $Attempt++) {
+    if ($ServerProc.HasExited) { throw "AI Dictionary backend exited before startup. Check port $Port." }
+    try {
+        Invoke-RestMethod -Uri "${MainUrl}api/dict/stats" -TimeoutSec 1 | Out-Null
+        $Ready = $true
+        break
+    } catch { Start-Sleep -Milliseconds 100 }
+}
+if (-not $Ready) { Stop-Process -Id $ServerProc.Id; throw "Backend startup timed out." }
+$WebViewDir = Join-Path $AppRoot "webview2"
+Add-Type -Path (Join-Path $WebViewDir "Microsoft.Web.WebView2.Core.dll")
+Add-Type -Path (Join-Path $WebViewDir "Microsoft.Web.WebView2.WinForms.dll")
+$env:PATH = "$WebViewDir;$env:PATH"
+function New-AppBrowser($Url) {
+    $Browser = New-Object Microsoft.Web.WebView2.WinForms.WebView2
+    $Browser.Dock = "Fill"
+    $Browser.CreationProperties = New-Object Microsoft.Web.WebView2.WinForms.CoreWebView2CreationProperties
+    $Browser.CreationProperties.UserDataFolder = Join-Path $UserDir "WebView2"
+    $Browser.Add_WebMessageReceived({
+        param($sender, $eventArgs)
+        $Message = $eventArgs.WebMessageAsJson | ConvertFrom-Json
+        switch ($Message.action) {
+            'hideToTray' { $MainForm.Hide() }
+            'showMainWindow' {
+                Show-MainWindow
+                if ($Message.tab -in @('dictionary','translate','ocr','wordbook','history','models','settings')) {
+                    $null = $MainBrowser.ExecuteScriptAsync("window.switchTab('$($Message.tab)')")
+                }
+            }
+            'closeMiniPopover' { $MiniForm.Hide() }
+            'setCloseToTray' { $script:CloseToTray = [bool]$Message.enabled }
+            'quitApp' { $ItemExit.PerformClick() }
+            'syncState' {
+                $script:SelectionOn = [bool]$Message.screen_selection_enabled
+                $script:ClipboardOn = [bool]$Message.clipboard_capture_enabled
+                $ItemSelection.Checked = $script:SelectionOn
+                $ItemClipboard.Checked = $script:ClipboardOn
+            }
+        }
+    })
+    $Browser.Source = [Uri]$Url
+    return $Browser
+}
 
 $script:IsExplicitQuit = $false
 $script:CloseToTray    = $true
@@ -47,10 +100,7 @@ $MainForm.MinimumSize = New-Object System.Drawing.Size(860, 560)
 $MainForm.StartPosition = "CenterScreen"
 $MainForm.Icon = $AppIcon
 
-$MainBrowser = New-Object System.Windows.Forms.WebBrowser
-$MainBrowser.Dock = "Fill"
-$MainBrowser.ScriptErrorsSuppressed = $true
-$MainBrowser.Navigate($MainUrl)
+$MainBrowser = New-AppBrowser $MainUrl
 $MainForm.Controls.Add($MainBrowser)
 
 # 2. Create Youdao-style Tray Mini Lookup Popover Window (anchored near taskbar notification area)
@@ -66,10 +116,7 @@ $MiniForm.Icon = $AppIcon
 $WorkArea = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
 $MiniForm.Location = New-Object System.Drawing.Point(($WorkArea.Right - 410), ($WorkArea.Bottom - 525))
 
-$MiniBrowser = New-Object System.Windows.Forms.WebBrowser
-$MiniBrowser.Dock = "Fill"
-$MiniBrowser.ScriptErrorsSuppressed = $true
-$MiniBrowser.Navigate($TrayUrl)
+$MiniBrowser = New-AppBrowser $TrayUrl
 $MiniForm.Controls.Add($MiniBrowser)
 
 $MiniForm.Add_FormClosing({
@@ -118,6 +165,7 @@ function Show-MainWindow {
     if (-not $MainForm.Visible) { $MainForm.Show() }
     $MainForm.WindowState = "Normal"
     $MainForm.Activate()
+    $null = $MainBrowser.ExecuteScriptAsync("window.onRestoreFromTray && window.onRestoreFromTray()")
 }
 
 function Toggle-MiniWindow {
@@ -152,7 +200,7 @@ $ItemClipboard.Add_Click({
 
 $ItemOcr.Add_Click({
     Show-MainWindow
-    try { $MainBrowser.Document.InvokeScript("switchTab", @("ocr")) } catch {}
+    try { $MainBrowser.ExecuteScriptAsync("window.switchTab('ocr')") | Out-Null } catch {}
 })
 
 $ItemPrivacy.Add_Click({
@@ -165,7 +213,7 @@ $ItemPrivacy.Add_Click({
 
 $ItemSettings.Add_Click({
     Show-MainWindow
-    try { $MainBrowser.Document.InvokeScript("switchTab", @("settings")) } catch {}
+    try { $MainBrowser.ExecuteScriptAsync("window.switchTab('settings')") | Out-Null } catch {}
 })
 
 $ItemExit.Add_Click({
@@ -211,4 +259,10 @@ $MainForm.Add_FormClosing({
     }
 })
 
-[System.Windows.Forms.Application]::Run($MainForm)
+try { [System.Windows.Forms.Application]::Run($MainForm) }
+finally {
+    $NotifyIcon.Dispose()
+    $MiniForm.Dispose()
+    $MainForm.Dispose()
+    if ($ServerProc -and -not $ServerProc.HasExited) { Stop-Process -Id $ServerProc.Id -ErrorAction SilentlyContinue }
+}

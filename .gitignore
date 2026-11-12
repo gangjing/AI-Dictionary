@@ -15,6 +15,12 @@ data/*.db-wal
 # Rust / Tauri build intermediates
 src-tauri/target/
 node_modules/
+dist/backend/
+dist/pyinstaller-work/
+dist/*.spec
+dist/*.nupkg
+dist/test-results/
+dist/installers/*1.0.1*
 
 # Intermediate staging directories in dist/ (keep dist/installers/ tracked)
 dist/AppIcon.iconset/

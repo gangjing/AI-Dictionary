@@ -4,13 +4,18 @@ AI Dictionary — Cross-Platform Installer Builder (`scripts/build_installers.py
 Generates:
 1. macOS Native `.icns` & Windows `.ico` icons from our custom vector logo.
 2. macOS Universal Binary (`arm64` + `x86_64`) `AI Dictionary.app` bundle (`WKWebView` native shell + 14,625-entry offline `dictionary.db` + native `Vision` OCR / `Accessibility` bridge), signed with `codesign`.
-3. `dist/installers/AI-Dictionary-1.0.0-macOS-arm64.dmg`
-4. `dist/installers/AI-Dictionary-1.0.0-macOS-x64.dmg`
-5. `dist/installers/AI-Dictionary-1.0.0-macOS-Universal.pkg`
-6. `dist/installers/AI-Dictionary-1.0.0-Windows-x64-Setup.zip` (with `Install-Windows.ps1`, `Uninstall-Windows.ps1`, `Start-AIDictionary.bat`, `icon.ico`, and `.github/workflows/build-installers.yml` for signed MSI/NSIS builds).
+3. `dist/installers/AI-Dictionary-1.0.1-macOS-arm64.dmg`
+4. `dist/installers/AI-Dictionary-1.0.1-macOS-x64.dmg`
+5. `dist/installers/AI-Dictionary-1.0.1-macOS-Universal.pkg`
+6. `dist/installers/AI-Dictionary-1.0.1-Windows-x64-Setup.zip` (with `Install-Windows.ps1`, `Uninstall-Windows.ps1`, `Start-AIDictionary.bat`, `icon.ico`, and `.github/workflows/build-installers.yml` for signed MSI/NSIS builds).
 7. `dist/installers/SHA256SUMS.txt`
 """
 
+import argparse
+import sys
+import sqlite3
+import urllib.request
+import zipfile
 import hashlib
 import os
 import shutil
@@ -125,7 +130,8 @@ def build_macos_app_bundle(icns_path: Path, arch_mode: str = "universal") -> Pat
     shutil.copy2(icns_path, resources_dir / "AppIcon.icns")
     shutil.copy2(ROOT_DIR / "scripts" / "run_local_server.py", app_payload_dir / "scripts" / "run_local_server.py")
     shutil.copy2(ROOT_DIR / "data" / "dictionary.db", app_payload_dir / "data" / "dictionary.db")
-    shutil.copy2(ROOT_DIR / "data" / "user_data.db", app_payload_dir / "data" / "user_data.db")
+    clean_user_database(app_payload_dir / "data" / "user_data.db")
+    shutil.copytree(DIST_DIR / "backend" / "AIDictionaryServer", app_payload_dir / "backend")
     if (ROOT_DIR / "data" / "macos_native_bridge").exists():
         shutil.copy2(ROOT_DIR / "data" / "macos_native_bridge", app_payload_dir / "data" / "macos_native_bridge")
     shutil.copy2(ROOT_DIR / "src" / "index.html", app_payload_dir / "src" / "index.html")
@@ -150,9 +156,9 @@ def build_macos_app_bundle(icns_path: Path, arch_mode: str = "universal") -> Pat
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>1.0.1</string>
     <key>CFBundleVersion</key>
-    <string>100</string>
+    <string>101</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>NSHighResolutionCapable</key>
@@ -209,7 +215,7 @@ def build_macos_pkg(app_dir: Path, pkg_path: Path) -> None:
             "--identifier",
             "com.aidictionary.desktop.pkg",
             "--version",
-            "1.0.0",
+            "1.0.1",
             str(pkg_path),
         ]
     )
@@ -229,14 +235,16 @@ def build_windows_installer_bundle(ico_path: Path, out_zip_path: Path) -> None:
     shutil.copy2(ROOT_DIR / "scripts" / "run_local_server.py", win_staging / "app" / "scripts" / "run_local_server.py")
     shutil.copy2(ROOT_DIR / "scripts" / "windows_tray_shell.ps1", win_staging / "app" / "scripts" / "windows_tray_shell.ps1")
     shutil.copy2(ROOT_DIR / "data" / "dictionary.db", win_staging / "app" / "data" / "dictionary.db")
-    shutil.copy2(ROOT_DIR / "data" / "user_data.db", win_staging / "app" / "data" / "user_data.db")
+    clean_user_database(win_staging / "app" / "data" / "user_data.db")
+    shutil.copytree(DIST_DIR / "backend" / "AIDictionaryServer", win_staging / "app" / "backend")
+    package_webview2(win_staging / "app" / "webview2")
     shutil.copy2(ROOT_DIR / "src" / "index.html", win_staging / "app" / "src" / "index.html")
     shutil.copy2(ROOT_DIR / "public" / "assets" / "logo.svg", win_staging / "app" / "public" / "assets" / "logo.svg")
 
     start_bat = r"""@echo off
 chcp 65001 >nul
 title AI Dictionary — Local Offline AI Dictionary (Resident System Tray)
-powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%~dp0app\scripts\windows_tray_shell.ps1"
+powershell -STA -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%~dp0app\scripts\windows_tray_shell.ps1"
 """
     (win_staging / "Start-AIDictionary.bat").write_text(start_bat, encoding="utf-8")
 
@@ -248,7 +256,7 @@ New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 Copy-Item -Path "$PSScriptRoot\*" -Destination $InstallDir -Recurse -Force
 
 $WshShell = New-Object -ComObject WScript.Shell
-$DesktopShortcut = $WshShell.CreateShortcut("$Home\Desktop\AI Dictionary.lnk")
+$DesktopShortcut = $WshShell.CreateShortcut("$([Environment]::GetFolderPath("Desktop"))\AI Dictionary.lnk")
 $DesktopShortcut.TargetPath = "$InstallDir\Start-AIDictionary.bat"
 $DesktopShortcut.IconLocation = "$InstallDir\app\icon.ico"
 $DesktopShortcut.WorkingDirectory = $InstallDir
@@ -267,7 +275,7 @@ Write-Host "[OK] AI Dictionary v1.0 installed successfully! Desktop & Start Menu
 
     uninstall_ps1 = r"""# AI Dictionary v1.0 — Windows 11 x64 Uninstaller
 $InstallDir = Join-Path $env:LOCALAPPDATA "Programs\AI Dictionary"
-Remove-Item -Path "$Home\Desktop\AI Dictionary.lnk" -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "$([Environment]::GetFolderPath("Desktop"))\AI Dictionary.lnk" -Force -ErrorAction SilentlyContinue
 Remove-Item -Path "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\AI Dictionary.lnk" -Force -ErrorAction SilentlyContinue
 if (Test-Path $InstallDir) {
     Remove-Item -Path $InstallDir -Recurse -Force
@@ -278,8 +286,8 @@ Write-Host "[OK] AI Dictionary has been completely uninstalled." -ForegroundColo
 
     nsis_script = r"""; AI Dictionary v1.0 — NSIS Windows x64 Installer Script
 !define APP_NAME "AI Dictionary"
-!define APP_VERSION "1.0.0"
-OutFile "AI-Dictionary-1.0.0-Windows-x64-Setup.exe"
+!define APP_VERSION "1.0.1"
+OutFile "AI-Dictionary-1.0.1-Windows-x64-Setup.exe"
 InstallDir "$LOCALAPPDATA\Programs\AI Dictionary"
 Icon "app\icon.ico"
 RequestExecutionLevel user
@@ -303,43 +311,63 @@ def write_checksums() -> None:
         if f.is_file() and f.name != "SHA256SUMS.txt":
             h = hashlib.sha256(f.read_bytes()).hexdigest()
             size_mb = f.stat().st_size / (1024 * 1024)
-            lines.append(f"{h}  {f.name}  ({size_mb:.2f} MB)")
+            lines.append(f"{h}  {f.name}")
     (INSTALLERS_DIR / "SHA256SUMS.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def clean_user_database(destination: Path) -> None:
+    # Ship schema and model metadata, never development history, notes or settings.
+    source = sqlite3.connect(ROOT_DIR / "data" / "user_data.db")
+    target = sqlite3.connect(destination)
+    source.backup(target)
+    source.close()
+    for table in ("saved_words", "query_history", "app_settings"):
+        target.execute(f"DELETE FROM {table}")
+    target.execute("UPDATE model_registry SET status='not_installed', installed_at=NULL")
+    target.commit()
+    target.execute("VACUUM")
+    target.close()
+
+
+def package_webview2(destination: Path) -> None:
+    version = "1.0.4314.35"
+    destination.mkdir(parents=True, exist_ok=True)
+    package = DIST_DIR / f"webview2-{version}.nupkg"
+    if not package.exists():
+        urllib.request.urlretrieve(f"https://api.nuget.org/v3-flatcontainer/microsoft.web.webview2/{version}/microsoft.web.webview2.{version}.nupkg", package)
+    with zipfile.ZipFile(package) as archive:
+        for name in ("Microsoft.Web.WebView2.Core.dll", "Microsoft.Web.WebView2.WinForms.dll"):
+            (destination / name).write_bytes(archive.read("lib/net462/" + name))
+        (destination / "WebView2Loader.dll").write_bytes(archive.read("runtimes/win-x64/native/WebView2Loader.dll"))
+        (destination / "LICENSE.txt").write_bytes(archive.read("LICENSE.txt"))
+
+
+def build_backend() -> None:
+    run_cmd([sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--onedir",
+             "--name", "AIDictionaryServer", "--distpath", str(DIST_DIR / "backend"),
+             "--workpath", str(DIST_DIR / "pyinstaller-work"), "--specpath", str(DIST_DIR),
+             str(ROOT_DIR / "scripts" / "run_local_server.py")])
+
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--platform", choices=["windows", "macos"], default="windows" if sys.platform == "win32" else "macos")
+    parser.add_argument("--arch", choices=["arm64", "x64"], default="arm64")
+    args = parser.parse_args()
+    if args.platform == "macos" and sys.platform != "darwin":
+        parser.error("macOS builds require a macOS runner with Xcode command line tools")
+    if args.platform == "windows" and sys.platform != "win32":
+        parser.error("Windows backend builds require a Windows runner")
     INSTALLERS_DIR.mkdir(parents=True, exist_ok=True)
-    print("[1/5] Generating macOS .icns and Windows .ico icons from custom vector logo...")
-    icns_path, ico_path = build_icons()
-
-    print("[2/5] Compiling macOS Apple Silicon (arm64), Intel (x86_64), and Universal .app bundles...")
-    app_arm64 = build_macos_app_bundle(icns_path, arch_mode="arm64")
-    app_x64 = build_macos_app_bundle(icns_path, arch_mode="x64")
-    app_univ = build_macos_app_bundle(icns_path, arch_mode="universal")
-
-    print("[3/5] Packaging macOS .dmg and .pkg installers...")
-    build_macos_dmg(
-        app_arm64,
-        INSTALLERS_DIR / "AI-Dictionary-1.0.0-macOS-arm64.dmg",
-        "AI Dictionary v1.0 (Apple Silicon)",
-    )
-    build_macos_dmg(
-        app_x64,
-        INSTALLERS_DIR / "AI-Dictionary-1.0.0-macOS-x64.dmg",
-        "AI Dictionary v1.0 (Intel x64)",
-    )
-    build_macos_pkg(
-        app_univ,
-        INSTALLERS_DIR / "AI-Dictionary-1.0.0-macOS-Universal.pkg",
-    )
-
-    print("[4/5] Packaging Windows 11 x64 Installer bundle...")
-    build_windows_installer_bundle(
-        ico_path,
-        INSTALLERS_DIR / "AI-Dictionary-1.0.0-Windows-x64-Setup.zip",
-    )
-
-    print("[5/5] Computing SHA256 checksums for all release artifacts...")
+    build_backend()
+    if args.platform == "windows":
+        build_windows_installer_bundle(ICONS_DIR / "icon.ico", INSTALLERS_DIR / "AI-Dictionary-1.0.1-Windows-x64-Setup.zip")
+    else:
+        # Build the bridge for the same architecture as the packaged runtime.
+        target = "arm64" if args.arch == "arm64" else "x86_64"
+        run_cmd(["swiftc", "-O", "-target", target + "-apple-macosx13.0", str(ROOT_DIR / "scripts" / "macos_native_bridge.swift"),
+                 "-o", str(ROOT_DIR / "data" / "macos_native_bridge"), "-framework", "Cocoa", "-framework", "Vision", "-framework", "AVFoundation"])
+        app = build_macos_app_bundle(ICONS_DIR / "icon.icns", args.arch)
+        build_macos_dmg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.1-macOS-{args.arch}.dmg", "AI Dictionary 1.0.1")
+        build_macos_pkg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.1-macOS-{args.arch}.pkg")
     write_checksums()
-    print("\n[SUCCESS] All macOS and Windows installer packages built in dist/installers/:")
-    print((INSTALLERS_DIR / "SHA256SUMS.txt").read_text(encoding="utf-8"))
