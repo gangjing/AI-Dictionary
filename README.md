@@ -1,3 +1,5 @@
+> **1.0.1 修复说明：** 当前安装包采用 Swift / WebView2 + Python 后端。已修复原生页面切换循环等稳定性问题；以下 v1.0 功能描述中，真实 AI 推理、模型下载、截图 OCR、系统划词尚未完整实现。详见 [代码检查与修复记录](docs/BUG_REVIEW_1.0.1.md)。新构建入口为 `.github/workflows/build-installers.yml`，本地构建使用 `python scripts/build_installers.py --platform windows` 或在 Mac 上使用 `--platform macos --arch arm64`（Intel 使用 `--arch x64`）。
+
 <p align="center">
   <img src="public/assets/logo.svg" width="96" height="96" alt="AI Dictionary Logo" />
 </p>

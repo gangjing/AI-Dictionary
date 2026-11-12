@@ -1,59 +1,44 @@
-name: Release Cross-Platform Installers (Windows & macOS)
-
+name: Build and test native installers
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches: ['fix/**']
   workflow_dispatch:
-
 permissions:
-  contents: write
-
+  contents: read
 jobs:
-  build-native-and-tauri-release:
+  build:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-latest'
-            args: '--target aarch64-apple-darwin'
-            label: 'macOS-Apple-Silicon-arm64'
-          - platform: 'macos-latest'
-            args: '--target x86_64-apple-darwin'
-            label: 'macOS-Intel-x64'
-          - platform: 'windows-latest'
-            args: '--target x86_64-pc-windows-msvc'
-            label: 'Windows-x64'
-
-    runs-on: ${{ matrix.platform }}
+          - os: windows-latest
+            platform: windows
+            arch: x64
+          - os: macos-26
+            platform: macos
+            arch: arm64
+          - os: macos-15-intel
+            platform: macos
+            arch: x64
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Python 3.11 (Dictionary ETL & Packaging)
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-
-      - name: Build SQLite FTS5 Dictionary Database (14,625 Public Entries)
-        run: python scripts/etl_dictionary.py
-
-      - name: Run Automated Acceptance & Performance Suite
-        run: python scripts/verify_acceptance.py
-
-      - name: Install Rust Stable Toolchain
-        uses: dtolnay/rust-toolchain@stable
+          python-version: '3.12'
+      - run: python -m pip install pyinstaller==6.17.0 playwright==1.58.0
+      - run: python -m playwright install chromium webkit
+      - name: Regression tests (isolated data)
+        run: python scripts/test_regressions.py
+      - name: Native package with bundled Python runtime
+        run: python scripts/build_installers.py --platform ${{ matrix.platform }} --arch ${{ matrix.arch }}
+      - uses: actions/upload-artifact@v4
         with:
-          targets: aarch64-apple-darwin,x86_64-apple-darwin,x86_64-pc-windows-msvc
-
-      - name: Build Tauri v2 Release Bundle
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: AI-Dictionary-1.0.1-${{ matrix.platform }}-${{ matrix.arch }}
+          path: dist/installers/*1.0.1*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          tagName: v__VERSION__
-          releaseName: 'AI Dictionary v__VERSION__'
-          releaseBody: 'Cross-platform offline AI Dictionary (Windows x64 MSI/NSIS & macOS arm64/x64 DMG/PKG).'
-          releaseDraft: true
-          prerelease: false
-          args: ${{ matrix.args }}
+          name: browser-checks-${{ matrix.platform }}-${{ matrix.arch }}
+          path: dist/test-results/

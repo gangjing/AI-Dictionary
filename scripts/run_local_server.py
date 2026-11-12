@@ -20,7 +20,7 @@ import threading
 import time
 import unicodedata
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from functools import lru_cache
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -56,7 +56,7 @@ STATE = RuntimeState()
 
 def get_dict_conn() -> sqlite3.Connection:
     if STATE.dict_conn is None:
-        uri = f"file:{DICT_DB_PATH}?mode=ro"
+        uri = DICT_DB_PATH.resolve().as_uri() + "?mode=ro"
         conn = sqlite3.connect(uri, uri=True, check_same_thread=False)
         conn.execute("PRAGMA mmap_size = 268435456;")
         conn.execute("PRAGMA cache_size = -32768;")
@@ -366,6 +366,8 @@ def review_word_rpc(source_text: str, rating: int) -> dict:
     conn = get_user_conn()
     cur = conn.cursor()
     now = datetime.now(timezone.utc).isoformat()
+    rating = min(5, max(1, rating))
+    next_review = (datetime.now(timezone.utc) + timedelta(days=[1, 2, 4, 7, 15][rating - 1])).isoformat()
     cur.execute(
         """
         UPDATE saved_words
@@ -375,7 +377,7 @@ def review_word_rpc(source_text: str, rating: int) -> dict:
             updated_at = ?
         WHERE source_text = ?
         """,
-        (rating, now, now, source_text.strip()),
+        (rating, next_review, now, source_text.strip()),
     )
     conn.commit()
     conn.close()
@@ -425,16 +427,23 @@ def import_custom_dictionary_rpc(entries: list) -> dict:
             senses = item.get("senses") or [{"pos": pos, "zh": zh, "en": item.get("en", ""), "source_id": "user-imported-dict"}]
             senses_json = json.dumps(senses, ensure_ascii=False)
             senses_text = " ".join(f"{s.get('pos', '')} {s.get('zh', '')}" for s in senses)
+            previous = cur.execute("SELECT rowid, lemma, senses_json FROM dictionary_entries WHERE id = ?", (f"en:{lw}",)).fetchone()
+            if previous:
+                old_text = " ".join(f"{s.get('pos', '')} {s.get('zh', '')}" for s in json.loads(previous[2]))
+                cur.execute("INSERT INTO dictionary_fts(dictionary_fts, rowid, lemma, senses_text) VALUES ('delete', ?, ?, ?)", (previous[0], previous[1], old_text))
             cur.execute(
                 """
-                INSERT OR REPLACE INTO dictionary_entries (
+                INSERT INTO dictionary_entries (
                     id, lemma, lemma_lower, lang, ipa_uk, ipa_us,
                     senses_json, forms_json, examples_json, source_id, source_version
                 ) VALUES (?, ?, ?, 'en', ?, ?, ?, '{}', '[]', 'user-imported-dict', 'custom')
+                ON CONFLICT(id) DO UPDATE SET lemma=excluded.lemma, lemma_lower=excluded.lemma_lower,
+                    senses_json=excluded.senses_json, ipa_uk=excluded.ipa_uk, ipa_us=excluded.ipa_us,
+                    source_id=excluded.source_id, source_version=excluded.source_version
                 """,
                 (f"en:{lw}", word, lw, item.get("ipa", ""), item.get("ipa", ""), senses_json),
             )
-            rowid = cur.lastrowid
+            rowid = cur.execute("SELECT rowid FROM dictionary_entries WHERE id = ?", (f"en:{lw}",)).fetchone()[0]
             cur.execute(
                 "INSERT INTO dictionary_fts(rowid, lemma, senses_text) VALUES (?, ?, ?)",
                 (rowid, word, senses_text),
@@ -640,6 +649,11 @@ def translate_rpc(payload: dict) -> dict:
     3. Token protection for code/variables/URLs (AC-10)
     4. Glossary & style constraint enforcement (F-015)
     """
+    # The legacy synthesizer below is a demo, not a Hy-MT2 inference engine.
+    # Never return fabricated "AI translations" in an installed application.
+    if os.environ.get('AIDICT_ENABLE_DEMO_TRANSLATION') != '1':
+        return {"status": "engine_unavailable", "request_id": payload.get("request_id"),
+                "message": "此版本尚未接入真实 Hy-MT2 推理引擎，暂不能进行 AI 翻译。离线词典可正常使用。"}
     t0 = time.perf_counter()
     req_id = payload.get("request_id") or str(uuid.uuid4())
     text = (payload.get("text") or "").strip()
@@ -928,6 +942,9 @@ class DictionaryRequestHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/models":
+            if payload.get("action") == "install_and_verify" and os.environ.get('AIDICT_ENABLE_DEMO_TRANSLATION') != '1':
+                self._send_json({"status": "not_implemented", "message": "模型下载与校验尚未实现，不能将模型标记为已安装。"}, status=501)
+                return
             models = update_model_status_rpc(payload.get("model_id", ""), payload.get("action", ""))
             self._send_json({"models": models})
             return

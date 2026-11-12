@@ -16,6 +16,7 @@ import sys
 import sqlite3
 import urllib.request
 import zipfile
+import tempfile
 import hashlib
 import os
 import shutil
@@ -271,7 +272,7 @@ $StartShortcut.Save()
 
 Write-Host "[OK] AI Dictionary v1.0 installed successfully! Desktop & Start Menu shortcuts created." -ForegroundColor Green
 """
-    (win_staging / "Install-Windows.ps1").write_text(install_ps1, encoding="utf-8")
+    (win_staging / "Install-Windows.ps1").write_text(install_ps1, encoding="utf-8-sig")
 
     uninstall_ps1 = r"""# AI Dictionary v1.0 — Windows 11 x64 Uninstaller
 $InstallDir = Join-Path $env:LOCALAPPDATA "Programs\AI Dictionary"
@@ -282,7 +283,7 @@ if (Test-Path $InstallDir) {
 }
 Write-Host "[OK] AI Dictionary has been completely uninstalled." -ForegroundColor Yellow
 """
-    (win_staging / "Uninstall-Windows.ps1").write_text(uninstall_ps1, encoding="utf-8")
+    (win_staging / "Uninstall-Windows.ps1").write_text(uninstall_ps1, encoding="utf-8-sig")
 
     nsis_script = r"""; AI Dictionary v1.0 — NSIS Windows x64 Installer Script
 !define APP_NAME "AI Dictionary"
@@ -368,6 +369,13 @@ if __name__ == "__main__":
         run_cmd(["swiftc", "-O", "-target", target + "-apple-macosx13.0", str(ROOT_DIR / "scripts" / "macos_native_bridge.swift"),
                  "-o", str(ROOT_DIR / "data" / "macos_native_bridge"), "-framework", "Cocoa", "-framework", "Vision", "-framework", "AVFoundation", "-framework", "Carbon"])
         app = build_macos_app_bundle(ICONS_DIR / "icon.icns", args.arch)
+        with tempfile.TemporaryDirectory() as user_dir:
+            env = {**os.environ, "AIDICT_USER_DATA_DIR": user_dir}
+            smoke = subprocess.run([str(app / "Contents" / "MacOS" / "AIDictionary"), "--smoke-test"], env=env,
+                                   capture_output=True, text=True, timeout=60)
+            if "AIDICT_NATIVE_SMOKE_PASS" not in smoke.stdout:
+                raise RuntimeError("Native macOS smoke failed: " + smoke.stdout + smoke.stderr)
+            print(smoke.stdout)
         build_macos_dmg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.1-macOS-{args.arch}.dmg", "AI Dictionary 1.0.1")
         build_macos_pkg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.1-macOS-{args.arch}.pkg")
     write_checksums()

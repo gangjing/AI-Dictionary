@@ -1,7 +1,7 @@
 import Cocoa
 import WebKit
 
-class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMessageHandler {
+class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMessageHandler, WKNavigationDelegate {
     var window: NSWindow!
     var webView: WKWebView!
     var statusItem: NSStatusItem!
@@ -14,6 +14,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
     var menuPrivacyItem: NSMenuItem!
 
     var serverProcess: Process?
+    var smokeNavigationMessages = 0
+    let smokeTest = ProcessInfo.processInfo.arguments.contains("--smoke-test")
     let serverPort = 14205
 
     var closeToTray: Bool = true
@@ -42,6 +44,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
         appMenu.addItem(NSMenuItem.separator())
         appMenu.addItem(withTitle: "完全退出 AI 词典", action: #selector(explicitQuitAction), keyEquivalent: "q")
         appMenuItem.submenu = appMenu
+        let editItem = NSMenuItem()
+        let editMenu = NSMenu(title: "编辑")
+        editMenu.addItem(withTitle: "撤销", action: Selector(("undo:")), keyEquivalent: "z")
+        editMenu.addItem(withTitle: "剪切", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: "复制", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: "粘贴", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: "全选", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editItem.submenu = editMenu
+        mainMenu.addItem(editItem)
         NSApp.mainMenu = mainMenu
     }
 
@@ -68,6 +79,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
         config.userContentController.add(self, name: "nativeShell")
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
         webView = WKWebView(frame: window.contentView!.bounds, configuration: config)
+        webView.navigationDelegate = self
         webView.autoresizingMask = [.width, .height]
         window.contentView?.addSubview(webView)
         window.makeKeyAndOrderFront(nil)
@@ -260,6 +272,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
         case "hideToTray":
             window.orderOut(nil)
         case "showMainWindow":
+            smokeNavigationMessages += 1
             showMainWindowAction()
             if let tab = body["tab"] as? String {
                 let allowedTabs = ["dictionary", "translate", "ocr", "wordbook", "history", "models", "settings"]
@@ -297,11 +310,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
 
     func startBackendDaemon() {
         guard let resourcePath = Bundle.main.resourcePath else { return }
-        let serverScript = (resourcePath as NSString).appendingPathComponent("app/scripts/run_local_server.py")
         let bundledDataDir = (resourcePath as NSString).appendingPathComponent("app/data")
 
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let userDir = appSupport.appendingPathComponent("AIDictionary", isDirectory: true)
+        let userDir = ProcessInfo.processInfo.environment["AIDICT_USER_DATA_DIR"].map { URL(fileURLWithPath: $0) }
+            ?? appSupport.appendingPathComponent("AIDictionary", isDirectory: true)
         try? FileManager.default.createDirectory(at: userDir, withIntermediateDirectories: true)
 
         let bundledUserDb = URL(fileURLWithPath: bundledDataDir).appendingPathComponent("user_data.db")
@@ -363,6 +376,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
     func applicationWillTerminate(_ notification: Notification) {
         if let proc = serverProcess, proc.isRunning {
             proc.terminate()
+        }
+    }
+
+    // Exercise the real WKWebView -> native -> WKWebView navigation path in CI.
+    func webView(_ view: WKWebView, didFinish navigation: WKNavigation!) {
+        guard smokeTest, view === webView else { return }
+        view.evaluateJavaScript("restoreMainWindowFromTray('models')", completionHandler: nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            view.evaluateJavaScript("document.getElementById('page-models').classList.contains('active')") { result, error in
+                if error == nil, result as? Bool == true, self.smokeNavigationMessages == 1 {
+                    print("AIDICT_NATIVE_SMOKE_PASS")
+                } else {
+                    print("AIDICT_NATIVE_SMOKE_FAIL: messages=\(self.smokeNavigationMessages), error=\(String(describing: error))")
+                }
+                self.explicitQuitAction()
+            }
         }
     }
 }

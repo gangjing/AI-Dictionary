@@ -33,12 +33,30 @@ class BackendTests(unittest.TestCase):
         if os.sys.platform != 'darwin':
             self.assertEqual(srv.get_native_bridge_report()['status'], 'unavailable')
 
+    def test_dictionary_reimport_updates_search_index(self):
+        for text in ('独特旧释义甲', '独特新释义乙'):
+            srv.import_custom_dictionary_rpc([{'word': 'regression-index', 'zh': text}])
+        self.assertFalse(srv.lookup_word_rpc('独特旧释义甲', False)['found'])
+        self.assertEqual(srv.lookup_word_rpc('独特新释义乙', False)['entry']['lemma'], 'regression-index')
+
+    def test_review_scheduled_in_future(self):
+        srv.save_word_rpc({'source_text': 'regression-review'})
+        srv.review_word_rpc('regression-review', 5)
+        item = next(x for x in srv.list_wordbook_rpc() if x['source_text'] == 'regression-review')
+        self.assertGreater(item['next_review_at'], item['updated_at'])
+
+    def test_no_fabricated_ai_translation(self):
+        result = srv.translate_rpc({'text': 'A novel sentence', 'request_id': 'test'})
+        self.assertEqual(result['status'], 'engine_unavailable')
+        self.assertNotIn('translated_text', result)
+
     def test_http_invalid_json(self):
         for body in (b'{', b'[]', b'null'):
             req = urllib.request.Request(URL + '/api/settings', data=body)
             with self.assertRaises(urllib.error.HTTPError) as ctx:
                 urllib.request.urlopen(req)
             self.assertEqual(ctx.exception.code, 400)
+            ctx.exception.close()
 
 
 class BrowserTests(unittest.TestCase):

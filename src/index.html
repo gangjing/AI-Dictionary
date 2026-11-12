@@ -1414,6 +1414,7 @@
       }
       trayState[key] = val;
       syncTrayUI();
+      fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({[key]:val})});
     };
 
     function updateCloseToTraySetting(enabled) {
@@ -1654,9 +1655,9 @@
       if (currentTranslationReqId !== requestId || data.status === 'cancelled') return;
       const badge = document.getElementById('transAc10StatusBadge');
 
-      if (data.status === 'model_not_installed') {
+      if (data.status !== 'ok') {
         out.value = data.message;
-        badge.innerHTML = `<span style="color:var(--warning);">未启用翻译模型，请在「6. 设置与词库」中启用模型</span>`;
+        badge.textContent = data.message || '翻译暂不可用';
         return;
       }
       out.value = data.translated_text || '';
@@ -1684,21 +1685,8 @@
     }
 
     async function refreshNativeOcrAndAx() {
-      const res = await fetch('/api/native-bridge');
-      const data = await res.json();
-      if (!data.visionOcr) return;
-
-      latestOcrLines = data.visionOcr.lines || [];
-      document.getElementById('ocrRecognizedList').innerHTML = latestOcrLines.map((l, idx) => `
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span class="tag">第 ${idx + 1} 行</span>
-          <input type="text" value="${escapeHtml(l.text)}" class="ocr-editable-line" style="flex:1;" />
-        </div>
-      `).join('');
-
-      const sec = data.secureFieldSimulation || {};
-      document.getElementById('ocrAxSecurityCard').innerText =
-        `安全状态：${sec.message} · 系统离线语音包：${data.availableVoicesCount} 个可用`;
+      document.getElementById('ocrAxSecurityCard').textContent = '当前仅提供原生能力诊断，尚未接入用户选区截图 OCR。';
+      document.getElementById('ocrRecognizedList').textContent = '区域截图 OCR 尚未实现。';
     }
 
     function sendOcrLinesToTranslator() {
@@ -1882,11 +1870,16 @@
     }
 
     async function updateModel(modelId, action) {
-      await fetch('/api/models', {
+      const response = await fetch('/api/models', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model_id: modelId, action })
       });
+      if (!response.ok) {
+        const data = await response.json();
+        showToast(data.message || '模型操作失败');
+        return;
+      }
       loadModels();
       showToast('模型状态已更新');
     }
@@ -1899,6 +1892,12 @@
         if (typeof s.close_to_tray === 'boolean') trayState.close_to_tray = s.close_to_tray;
         if (typeof s.screen_selection_enabled === 'boolean') trayState.screen_selection_enabled = s.screen_selection_enabled;
         if (typeof s.clipboard_capture_enabled === 'boolean') trayState.clipboard_capture_enabled = s.clipboard_capture_enabled;
+        if (s.hotkey_lookup_mac) document.getElementById('hotkeyLookupInput').value = s.hotkey_lookup_mac;
+        if (s.hotkey_ocr_mac) document.getElementById('hotkeyOcrInput').value = s.hotkey_ocr_mac;
+        if (s.tray_click_action) {
+          trayState.tray_click_action = s.tray_click_action;
+          document.getElementById('settingTrayClickAction').value = s.tray_click_action;
+        }
         syncTrayUI();
         postToNativeShell({action: 'setCloseToTray', enabled: trayState.close_to_tray});
         postToNativeShell({action: 'syncState', ...trayState});
@@ -1923,6 +1922,7 @@
         return;
       }
       showToast('设置已保存');
+      await loadSystemSettings();
     }
 
     function toggleQuickPillOverlay() {
