@@ -366,7 +366,7 @@ if __name__ == "__main__":
         # Build the bridge for the same architecture as the packaged runtime.
         target = "arm64" if args.arch == "arm64" else "x86_64"
         run_cmd(["swiftc", "-O", "-target", target + "-apple-macosx13.0", str(ROOT_DIR / "scripts" / "macos_native_bridge.swift"),
-                 "-o", str(ROOT_DIR / "data" / "macos_native_bridge"), "-framework", "Cocoa", "-framework", "Vision", "-framework", "AVFoundation"])
+                 "-o", str(ROOT_DIR / "data" / "macos_native_bridge"), "-framework", "Cocoa", "-framework", "Vision", "-framework", "AVFoundation", "-framework", "Carbon"])
         app = build_macos_app_bundle(ICONS_DIR / "icon.icns", args.arch)
         build_macos_dmg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.1-macOS-{args.arch}.dmg", "AI Dictionary 1.0.1")
         build_macos_pkg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.1-macOS-{args.arch}.pkg")
