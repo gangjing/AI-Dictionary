@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Windows 11 Fluent 划词速查悬浮窗</title>
+<!-- Load Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            fluent: ['"Segoe UI Variable Text"', '"Segoe UI Variable"', '"Segoe UI"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['"Consolas"', '"Cascadia Code"', 'monospace']
+          },
+          colors: {
+            winAccent: {
+              DEFAULT: '#0067c0',
+              hover: '#1975c5',
+              subtle: '#e0eef9',
+              darkSubtle: '#0f2742'
+            },
+            mica: {
+              surface: 'rgba(255, 255, 255, 0.88)',
+              surfaceDark: 'rgba(32, 32, 32, 0.88)',
+              card: 'rgba(255, 255, 255, 0.65)',
+              border: 'rgba(0, 0, 0, 0.08)'
+            }
+          },
+          boxShadow: {
+            'fluent-flyout': '0 24px 48px -12px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.6) inset, 0 2px 10px rgba(0,0,0,0.06)'
+          }
+        }
+      }
+    }
+  </script>
+<!-- BEGIN: Custom Fluent System Styles -->
+<style data-purpose="fluent-visual-effects">
+    body {
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+    
+    /* Acrylic / Mica Material Simulation */
+    .fluent-acrylic {
+      background: rgba(243, 243, 243, 0.85);
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+    }
+
+    .dark .fluent-acrylic {
+      background: rgba(36, 36, 36, 0.86);
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Subtle custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.16);
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.28);
+    }
+  </style>
+<!-- END: Custom Fluent System Styles -->
+</head>
+<body class="h-full bg-slate-900/60 font-fluent flex items-center justify-center p-4 overflow-hidden relative selection:bg-sky-500/20">
+<!-- BEGIN: Desktop Ambient Backdrop Simulation -->
+<div class="absolute inset-0 -z-10 bg-cover bg-center filter blur-xl scale-105 opacity-60 pointer-events-none" style="background-image: radial-gradient(circle at 40% 30%, #1e3a8a 0%, #0f172a 60%, #030712 100%);">
+</div>
+<!-- END: Desktop Ambient Backdrop Simulation -->
+<!-- BEGIN: QuickLookupCardContainer -->
+<!-- Mimicking the exact proportions (~420px x ~560px) and popup structure of reference -->
+<main class="fluent-acrylic w-full max-w-[428px] h-[580px] rounded-2xl shadow-fluent-flyout flex flex-col justify-between overflow-hidden text-slate-800 transition-all duration-200" data-purpose="quick-lookup-card" id="fluent-lookup-widget">
+<!-- BEGIN: TopBar -->
+<header class="px-4 pt-3.5 pb-2.5 flex items-center justify-between border-b border-black/[0.06] bg-white/30 backdrop-blur-sm select-none">
+<!-- Left: App Identity & Global Hotkey -->
+<div class="flex items-center gap-2">
+<span class="w-5 h-5 rounded-md bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-sm ring-1 ring-white/20">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewbox="0 0 24 24">
+<path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
+<path d="M12 12 2.1 12a10.1 10.1 0 0 0 1.9 4"></path>
+<path d="M12 12 2.1 12a10.1 10.1 0 0 1 1.9-4"></path>
+</svg>
+</span>
+<div class="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+<span>AI 划词</span>
+<span class="text-[10px] text-slate-400 font-mono tracking-tight font-normal bg-black/[0.04] px-1.5 py-0.5 rounded border border-black/[0.04]">Ctrl+Alt+T</span>
+</div>
+</div>
+<!-- Center: Language Pair Badge -->
+<div class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100/90 border border-slate-200/80 text-[11px] font-medium text-slate-600">
+<span class="font-semibold text-slate-800">EN</span>
+<svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="m9 18 6-6-6-6"></path>
+</svg>
+<span>ZH-CN</span>
+<span class="text-[9px] text-slate-400 ml-0.5 scale-90">自动</span>
+</div>
+<!-- Right: Window Utility Controls -->
+<div class="flex items-center gap-1">
+<!-- Pin Button -->
+<button class="p-1.5 rounded-md hover:bg-black/[0.06] text-slate-500 hover:text-slate-800 transition-colors" id="btn-pin" title="固定窗口">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<line x1="12" x2="12" y1="17" y2="22"></line>
+<path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a1 1 0 0 0 0-2H8a1 1 0 0 0 0 2h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path>
+</svg>
+</button>
+<!-- Close Button -->
+<button class="p-1.5 rounded-md hover:bg-red-500 hover:text-white text-slate-500 transition-colors" id="btn-close" title="关闭 (Esc)">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewbox="0 0 24 24">
+<line x1="18" x2="6" y1="6" y2="18"></line>
+<line x1="6" x2="18" y1="6" y2="18"></line>
+</svg>
+</button>
+</div>
+</header>
+<!-- END: TopBar -->
+<!-- BEGIN: ScrollableContentArea -->
+<div class="flex-1 overflow-y-auto px-4 py-3.5 space-y-3.5">
+<!-- Word & Phonetic Card -->
+<section class="bg-white/70 rounded-xl p-3.5 shadow-sm border border-black/[0.04]" data-purpose="word-header">
+<div class="flex items-start justify-between">
+<div>
+<div class="flex items-baseline gap-2">
+<h1 class="text-2xl font-bold tracking-tight text-slate-900">bandwidth</h1>
+<span class="text-xs font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/50">/ˈbænd.wɪdθ/</span>
+</div>
+<!-- Audio Speaker Pronunciations -->
+<div class="flex items-center gap-3 mt-2">
+<!-- UK Voice -->
+<button class="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200/70 transition-all hover:border-slate-300">
+<span class="text-slate-400 font-semibold text-[10px]">UK</span>
+<svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+<path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+</svg>
+<div class="flex items-end gap-0.5 h-2.5">
+<div class="w-0.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+<div class="w-0.5 h-2.5 bg-blue-500 rounded-full"></div>
+<div class="w-0.5 h-1 bg-blue-500 rounded-full"></div>
+</div>
+</button>
+<!-- US Voice -->
+<button class="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200/70 transition-all hover:border-slate-300">
+<span class="text-slate-400 font-semibold text-[10px]">US</span>
+<svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+<path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+<path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+</svg>
+</button>
+</div>
+</div>
+<!-- Quick Action Buttons: Star & Copy -->
+<div class="flex items-center gap-1">
+<button class="p-1.5 rounded-lg text-slate-400 hover:text-amber-500 hover:bg-amber-50 transition-colors" title="加入生词本">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+</svg>
+</button>
+<button class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" title="复制单词">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<rect height="13" rx="2" ry="2" width="13" x="9" y="9"></rect>
+<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+</svg>
+</button>
+</div>
+</div>
+</section>
+<!-- Instant Lexicon Result -->
+<section class="bg-white/70 rounded-xl p-3.5 shadow-sm border border-black/[0.04] space-y-2.5" data-purpose="structured-lexicon">
+<div class="flex items-center justify-between text-xs pb-1 border-b border-black/[0.04]">
+<div class="flex items-center gap-1.5">
+<span class="inline-block px-1.5 py-0.5 font-bold rounded text-[10px] bg-sky-100 text-sky-800">n. 名词</span>
+<span class="font-medium text-slate-600 text-[11px]">简明词典释义</span>
+</div>
+<span class="text-[10px] text-emerald-600 font-mono flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+            SQLite 12ms
+          </span>
+</div>
+<ul class="text-[13px] leading-relaxed text-slate-700 space-y-2">
+<li class="flex items-start gap-2">
+<span class="w-4 h-4 rounded-full bg-slate-100 text-[11px] font-semibold text-slate-500 flex items-center justify-center shrink-0 mt-0.5">1</span>
+<div class="flex-1">
+<p class="font-medium text-slate-800"><span class="text-slate-400 font-normal">〔通信 / 计算机〕</span> 带宽，频宽</p>
+<p class="text-xs text-slate-500 mt-0.5">每秒所能传送的数据量 (以 bit/s 计量)</p>
+</div>
+</li>
+<li class="flex items-start gap-2">
+<span class="w-4 h-4 rounded-full bg-slate-100 text-[11px] font-semibold text-slate-500 flex items-center justify-center shrink-0 mt-0.5">2</span>
+<div class="flex-1">
+<p class="font-medium text-slate-800"><span class="text-slate-400 font-normal">〔职场口语 / 比喻〕</span> 精力，时间，心理承受负荷</p>
+<div class="mt-1 px-2.5 py-1.5 rounded bg-slate-50 border border-slate-200/50 text-[11.5px] text-slate-600 font-serif italic">
+                “I don't have the <span class="font-sans font-semibold text-blue-600 not-italic">bandwidth</span> for this project right now.”
+                <span class="block text-[11px] font-sans not-italic text-slate-500 mt-0.5">我目前没有多余精力接这个项目。</span>
+</div>
+</div>
+</li>
+</ul>
+</section>
+<!-- Offline AI Stream Translation Preview (Hy-MT2 1.8B) -->
+<section class="bg-gradient-to-br from-indigo-50/70 via-white/80 to-blue-50/60 rounded-xl p-3.5 shadow-sm border border-indigo-100/80" data-purpose="ai-context-translation">
+<!-- AI Card Badge -->
+<div class="flex items-center justify-between pb-2 mb-2 border-b border-indigo-100/60">
+<div class="flex items-center gap-1.5 text-xs font-semibold text-indigo-900">
+<svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path>
+</svg>
+<span>Hy-MT2 1.8B 本地上下文解析</span>
+</div>
+<span class="text-[10px] font-mono text-indigo-600/80 bg-indigo-100/60 px-1.5 py-0.5 rounded">端侧极速</span>
+</div>
+<!-- Sentence Pair -->
+<div class="space-y-1.5 text-xs">
+<div>
+<span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">原文语境</span>
+<p class="text-slate-700 leading-snug mt-0.5 font-medium">
+              "Your Internet connection is very fast with ultra-low latency."
+            </p>
+</div>
+<div>
+<span class="text-[10px] uppercase font-bold text-indigo-500 tracking-wider">AI 润色释义</span>
+<p class="text-indigo-950 font-semibold leading-relaxed mt-0.5 bg-white/60 p-2 rounded-lg border border-indigo-100/60">
+              您的网络连接速度极快，且具备超低网络延迟。
+            </p>
+</div>
+</div>
+</section>
+</div>
+<!-- END: ScrollableContentArea -->
+<!-- BEGIN: BottomActionBar -->
+<footer class="p-3 bg-white/40 border-t border-black/[0.06] backdrop-blur-md flex flex-col gap-2">
+<!-- Primary Action Buttons Inspired by Modern Fluent Dialogs -->
+<div class="flex items-center gap-2">
+<!-- Secondary Button: Copy -->
+<button class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 shadow-sm transition-all active:scale-[0.98]">
+<svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<rect height="13" rx="2" ry="2" width="13" x="9" y="9"></rect>
+<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+</svg>
+<span>复制释义</span>
+<span class="text-[10px] text-slate-400 font-mono">Ctrl+C</span>
+</button>
+<!-- Primary Action Button: Open Master View -->
+<button class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#0067c0] hover:bg-[#1975c5] text-white shadow-sm transition-all active:scale-[0.98]">
+<span>完整分析</span>
+<span class="text-[10px] text-blue-200/90 font-mono">Ctrl+Enter</span>
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewbox="0 0 24 24">
+<path d="m9 18 6-6-6-6"></path>
+</svg>
+</button>
+</div>
+<!-- System Status Bar -->
+<div class="flex items-center justify-between text-[11px] text-slate-500 pt-1 px-1">
+<span class="flex items-center gap-1">
+<span class="text-amber-500">⚡</span>
+<span>纯离线推理 · 0 数据上传</span>
+</span>
+<button class="hover:text-slate-800 transition-colors underline-offset-2 hover:underline">
+          快捷键设置
+        </button>
+</div>
+</footer>
+<!-- END: BottomActionBar -->
+</main>
+<!-- END: QuickLookupCardContainer -->
+<!-- BEGIN: Interactive Logic -->
+<script data-purpose="interaction-handlers">
+    // Simple window dismiss demonstration on Escape key
+    document.addEventListener('keydown', (e) => {
+      const widget = document.getElementById('fluent-lookup-widget');
+      if (e.key === 'Escape' && widget) {
+        widget.style.opacity = '0';
+        widget.style.transform = 'scale(0.96)';
+        setTimeout(() => {
+          widget.style.display = 'none';
+        }, 150);
+      }
+    });
+
+    // Close button click handler
+    document.getElementById('btn-close')?.addEventListener('click', () => {
+      const widget = document.getElementById('fluent-lookup-widget');
+      if (widget) {
+        widget.style.opacity = '0';
+        widget.style.transform = 'scale(0.96)';
+        setTimeout(() => {
+          widget.style.display = 'none';
+        }, 150);
+      }
+    });
+
+    // Pin toggle visual feedback
+    const pinBtn = document.getElementById('btn-pin');
+    let isPinned = false;
+    pinBtn?.addEventListener('click', () => {
+      isPinned = !isPinned;
+      if (isPinned) {
+        pinBtn.classList.add('bg-blue-100', 'text-blue-700');
+        pinBtn.classList.remove('text-slate-500');
+      } else {
+        pinBtn.classList.remove('bg-blue-100', 'text-blue-700');
+        pinBtn.classList.add('text-slate-500');
+      }
+    });
+  </script>
+<!-- END: Interactive Logic -->
+</body></html>

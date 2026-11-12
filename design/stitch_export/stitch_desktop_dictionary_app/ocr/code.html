@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Segoe+UI+Variable:wght@100..900&display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={"darkMode":"class","theme":{"extend":{"colors":{"on-secondary-container":"#003664","background":"#fbf9f8","primary-container":"#0067c0","on-secondary":"#ffffff","on-tertiary-container":"#93f5ff","secondary-fixed":"#d3e3ff","inverse-on-surface":"#f2f0f0","error":"#ba1a1a","tertiary-fixed-dim":"#4bd9e5","on-error-container":"#93000a","primary-fixed":"#d5e3ff","surface-tint":"#005eb1","surface-dim":"#dbdad9","surface-container-highest":"#e4e2e2","on-background":"#1b1c1c","on-primary":"#ffffff","on-tertiary-fixed":"#002022","on-primary-fixed":"#001c3b","tertiary":"#00585e","on-secondary-fixed-variant":"#004883","primary-fixed-dim":"#a6c8ff","surface-variant":"#e4e2e2","outline":"#717783","surface-container-low":"#f5f3f3","error-container":"#ffdad6","inverse-primary":"#a6c8ff","secondary-container":"#4ca0ff","tertiary-container":"#00727a","on-error":"#ffffff","primary":"#004f96","on-primary-container":"#dbe7ff","surface-container-lowest":"#ffffff","on-tertiary":"#ffffff","surface-container":"#efeded","surface-bright":"#fbf9f8","on-primary-fixed-variant":"#004787","on-surface":"#1b1c1c","secondary":"#0060ab","inverse-surface":"#303030","on-tertiary-fixed-variant":"#004f55","surface":"#fbf9f8","secondary-fixed-dim":"#a3c9ff","surface-container-high":"#e9e8e7","outline-variant":"#c1c6d4","tertiary-fixed":"#7ff4ff","on-surface-variant":"#414752","on-secondary-fixed":"#001c39"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"space-xs":"0.25rem","margin":"1rem","gutter":"0.75rem","space-lg":"1rem","margin-desktop":"1.5rem","gutter-desktop":"1rem","space-md":"0.75rem","space-xl":"1.5rem","space-sm":"0.5rem"},"fontFamily":{"body-md":["Segoe UI Variable"],"body-lg":["Segoe UI Variable"],"headline-sm":["Segoe UI Variable"],"pos-tag":["Segoe UI Variable"],"mono-metric":["Segoe UI Variable"],"headline-md":["Segoe UI Variable"],"body-sm":["Segoe UI Variable"],"display":["Segoe UI Variable"],"headline-lg":["Segoe UI Variable"],"phonetic-ipa":["Segoe UI Variable"],"headline-lg-mobile":["Segoe UI Variable"]},"fontSize":{"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"body-lg":["15px",{"lineHeight":"22px","fontWeight":"400"}],"headline-sm":["16px",{"lineHeight":"22px","fontWeight":"600"}],"pos-tag":["11px",{"lineHeight":"14px","letterSpacing":"0.04em","fontWeight":"600"}],"mono-metric":["11px",{"lineHeight":"14px","letterSpacing":"0.01em","fontWeight":"500"}],"headline-md":["20px",{"lineHeight":"28px","fontWeight":"600"}],"body-sm":["12px",{"lineHeight":"16px","fontWeight":"400"}],"display":["40px",{"lineHeight":"52px","letterSpacing":"-0.02em","fontWeight":"600"}],"headline-lg":["28px",{"lineHeight":"36px","letterSpacing":"-0.015em","fontWeight":"600"}],"phonetic-ipa":["15px",{"lineHeight":"20px","letterSpacing":"0.02em","fontWeight":"400"}],"headline-lg-mobile":["24px",{"lineHeight":"32px","letterSpacing":"-0.01em","fontWeight":"600"}]}}}}</script></head><body class="bg-surface font-body-md text-on-surface select-none overflow-x-hidden min-h-screen"><header class="fixed top-0 left-0 right-0 h-10 bg-surface/90 backdrop-blur-2xl z-50 flex items-center justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex items-center gap-space-sm px-space-md h-full"><img alt="AI Dictionary Fluent App Icon" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/ALJJyrAPJ7sL7BIvhnZ0fei6yja0Dj1LqbwJLb_CiqUvOFWhQpz_4Xv7ng3oNEZjzB_GlqFQB4_BpBcxo2K_XUrZXlx05LXeL6W_5n33HI34lp8jjeIoJHBg2M5l_LSfuNyxfy3NpaJLoCS9hfNCAUP2AVwA9El_oEhYL7Z1JaD8iDNzj_Rz_DK6cCdqmqQ-fEnIiODHTyQ4LcF7QOLFtGODw5AgC9JAzf6pWZ0JFEyupUCSSg"/><span class="font-headline-sm text-body-sm text-on-surface tracking-tight font-medium">AI Dictionary 灵动词典 v1.0 <span class="font-mono-metric text-body-sm text-tertiary bg-surface-container-low px-space-xs py-0.5 rounded">[离线保护中]</span></span></div><div class="flex-1 h-full flex items-center justify-center"><div class="flex items-center gap-space-xs px-space-md py-0.5 rounded-lg bg-surface-container-low text-on-surface-variant font-mono-metric text-body-sm shadow-[0_1px_4px_rgba(0,0,0,0.02)]"><span class="material-symbols-outlined text-body-sm">search</span><span>快速全局查词</span><kbd class="bg-surface-container-highest px-space-xs rounded text-on-surface text-[10px]">Ctrl + F</kbd></div></div><div class="flex items-center h-full gap-space-sm pr-space-sm"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDCQgARpk-pLtQ5to7P7cded6ueen5zNTQcnAcpwVEwrFtP5I42FFXc3JR1gA-aL0Wed0i1r2SzsYA91RrOJ6e8z2Q3n1_4vr5e1-RDjvtepYVGqqFtCFMx9sSSOiY0RbG3Xmogp4k6fAibzt0nv9gEHEEzu07j9NnuIKebZAwiEkmBIHD-zJYiGxYdawhbUB2JecOKfYKgOldUDlvXwavKox5OM7ZnvMV8Fwn_YZBR"/><div class="flex items-center h-full"><button class="w-11 h-10 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" title="最小化" type="button"><span class="material-symbols-outlined text-[14px]">minimize</span></button><button class="w-11 h-10 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" title="最大化" type="button"><span class="material-symbols-outlined text-[14px]">check_box_outline_blank</span></button><button class="w-11 h-10 flex items-center justify-center text-on-surface-variant hover:bg-error hover:text-on-error transition-colors" title="关闭" type="button"><span class="material-symbols-outlined text-[16px]">close</span></button></div></div></header><aside class="fixed left-0 top-10 bottom-0 w-64 bg-surface-container-low/80 backdrop-blur-xl z-40 flex flex-col justify-between py-space-md shadow-[0_1px_8px_rgba(0,0,0,0.02)]"><div class="flex flex-col gap-space-xs px-space-sm"><nav class="flex flex-col gap-space-xs" data-active-classes="bg-primary-container text-on-primary font-headline-sm shadow-[0_2px_6px_rgba(0,103,192,0.25)]"><a class="group flex items-center gap-space-md px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all font-body-md" data-path="dictionary" href="#"><span class="material-symbols-outlined text-headline-sm">search</span><span>查词</span></a><a class="group flex items-center gap-space-md px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all font-body-md" data-path="ai-translate-studio" href="#"><span class="material-symbols-outlined text-headline-sm">translate</span><span>翻译</span></a><a aria-current="page" class="group flex items-center gap-space-md px-space-md py-space-sm rounded-lg transition-all bg-primary-container text-on-primary font-headline-sm shadow-[0_2px_6px_rgba(0,103,192,0.25)]" data-path="screen-ocr" href="#"><span class="material-symbols-outlined text-headline-sm">crop_free</span><span>截图 OCR</span></a><a class="group flex items-center gap-space-md px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all font-body-md" data-path="wordbook" href="#"><span class="material-symbols-outlined text-headline-sm">menu_book</span><span>生词本</span></a><a class="group flex items-center gap-space-md px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all font-body-md" data-path="history" href="#"><span class="material-symbols-outlined text-headline-sm">history</span><span>历史</span></a><a class="group flex items-center gap-space-md px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all font-body-md" data-path="settings-and-ai-model" href="#"><span class="material-symbols-outlined text-headline-sm">tune</span><span>模型与设置</span></a></nav></div><div class="px-space-md flex flex-col gap-space-sm"><div class="p-space-sm rounded-lg bg-surface-container shadow-[0_1px_4px_rgba(0,0,0,0.03)] flex flex-col gap-space-xs"><div class="flex items-center gap-space-xs"><span class="h-2 w-2 rounded-full bg-[#107c41] animate-pulse"></span><span class="font-headline-sm text-body-sm text-on-surface">本地离线引擎</span></div><div class="font-mono-metric text-on-surface-variant">Hy-MT2 1.8B · DirectML 本地活跃</div><div class="flex items-center justify-between text-on-surface-variant text-[10px] pt-1"><span class="flex items-center gap-1"><span class="material-symbols-outlined text-[12px] text-tertiary">shield</span>零数据回传</span><span>0ms 延迟</span></div></div></div></aside><div class="pl-64"><main class="relative pt-10 min-h-screen bg-surface"><div class="flex flex-col w-full">
+<div class="p-space-lg flex flex-col gap-space-lg w-full max-w-[1560px] mx-auto">
+<!-- Top Native Engine Status & Action Ribbon -->
+<div class="bg-surface-container rounded-xl p-space-md shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-[22px]">crop_free</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-space-xs flex-wrap">
+<span class="font-headline-sm text-body-md text-on-surface">Windows.Media.Ocr 本地引擎已就绪</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed-variant font-mono-metric text-body-sm font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+              DirectML 加速
+            </span>
+</div>
+<div class="flex items-center gap-space-xs text-on-surface-variant font-body-sm truncate">
+<span>全局热键监听中</span>
+<kbd class="px-1.5 py-0.5 rounded bg-surface-container-highest text-on-surface font-mono-metric text-[11px] shadow-sm">Ctrl + Alt + S</kbd>
+<span class="opacity-40">•</span>
+<span>离线神经网络 Hy-MT2 毫秒级联协同</span>
+</div>
+</div>
+</div>
+<!-- Action Button Group -->
+<div class="flex items-center gap-space-xs flex-wrap">
+<button class="group relative flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-primary text-on-primary font-headline-sm text-body-sm shadow-md hover:bg-surface-tint active:scale-[0.98] transition-all" id="btn-capture" type="button">
+<span class="material-symbols-outlined text-body-md">screenshot_region</span>
+<span>立即截取屏幕</span>
+<kbd class="ml-1 px-1.5 py-0.5 rounded bg-primary-container text-on-primary-container font-mono-metric text-[10px]">Ctrl+Alt+S</kbd>
+</button>
+<button class="flex items-center gap-space-xs px-space-md py-2 rounded-lg bg-surface-container-high text-on-surface font-headline-sm text-body-sm hover:bg-surface-container-highest active:scale-[0.98] transition-all" id="btn-upload" type="button">
+<span class="material-symbols-outlined text-body-md text-primary">upload_file</span>
+<span>导入本地图片识别</span>
+</button>
+<button class="flex items-center justify-center w-9 h-9 rounded-lg bg-surface-container-high text-on-surface-variant hover:text-error hover:bg-error-container active:scale-[0.98] transition-all" id="btn-clear" title="重置画布与缓存" type="button">
+<span class="material-symbols-outlined text-body-md">delete_sweep</span>
+</button>
+</div>
+</div>
+<!-- Center Stage: Asymmetric Split Preview & Dual Translation -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-space-lg items-start">
+<!-- Left Half: High-Fidelity OCR Live Viewport (7 Cols) -->
+<div class="xl:col-span-7 flex flex-col gap-space-sm bg-surface-container-low rounded-xl p-space-md shadow-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-tertiary text-body-md">photo_size_select_large</span>
+<span class="font-headline-sm text-body-sm text-on-surface">屏幕取词捕获视窗</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high font-mono-metric text-on-surface-variant text-[11px]">1920 × 1080 @ DPI 125%</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface font-mono-metric text-body-sm">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+              99.4% 本地识别置信度
+            </span>
+<button class="p-1 rounded text-on-surface-variant hover:bg-surface-container-highest transition-colors" title="全屏查看原图">
+<span class="material-symbols-outlined text-body-md">zoom_in</span>
+</button>
+</div>
+</div>
+<!-- Simulated Workspace Monitor Screen -->
+<div class="relative w-full aspect-[16/10] bg-[#1e1e1e] rounded-lg overflow-hidden shadow-inner flex flex-col">
+<!-- Window Header of simulated IDE / Terminal -->
+<div class="h-7 bg-[#252526] px-3 flex items-center justify-between shrink-0 select-none">
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-[#ff5f56]"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-[#27c93f]"></span>
+<span class="ml-2 font-mono-metric text-[11px] text-gray-400">PowerShell Core v7.4.2 · [Process ID 14208]</span>
+</div>
+<span class="font-mono-metric text-[10px] text-gray-500">utf-8</span>
+</div>
+<!-- Code / Terminal Body Mockup -->
+<div class="p-4 font-mono-metric text-body-sm text-gray-300 space-y-1.5 flex-1 select-none overflow-hidden relative">
+<p class="text-gray-500">// Initiating local IPC bridge listener for sidecar runtime...</p>
+<p><span class="text-[#4ec9b0]">info</span>: Host.DirectML[0] Initialized GPU node 0 successfully.</p>
+<p><span class="text-[#ce9178]">curl</span> -X POST http://127.0.0.1:8920/v1/neural/infer -H "Content-Type: application/json"</p>
+<!-- Target Detected Bounding Box Overlay Area -->
+<div class="relative my-2 p-2.5 rounded bg-error/10 overflow-hidden group">
+<!-- Green High-Precision Fluent Detection Border & Scan Effect -->
+<div class="absolute inset-0 bg-tertiary-fixed/15 pointer-events-none"></div>
+<div class="absolute top-0 left-0 right-0 h-[2px] bg-tertiary animate-pulse"></div>
+<!-- Pill HUD Label on top of bounding box -->
+<div class="absolute top-1 right-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-lowest/90 backdrop-blur-md shadow-sm">
+<span class="material-symbols-outlined text-[13px] text-tertiary">center_focus_strong</span>
+<span class="font-mono-metric text-[10px] text-on-surface font-semibold">OCR 区域锁定 · 0.04s</span>
+</div>
+<!-- The actual captured error text snippet -->
+<div class="relative z-0 text-[#f48771] font-mono-metric font-medium text-[13px] leading-relaxed">
+                ERROR 503: Service Unavailable. The local backend failed to establish IPC handshake with sidecar within 5000ms.
+              </div>
+</div>
+<p class="text-gray-500">[warn] retrying dispatch connection with exponential backoff (attempt 1/3)...</p>
+<p class="text-gray-400">> Process waiting for manual user signal interrupt (^C)...</p>
+<!-- Decorative Visual Lens Grid -->
+<div class="absolute bottom-3 right-3 p-2 bg-[#2d2d2d]/90 backdrop-blur-md rounded-lg shadow-lg flex items-center gap-3 text-gray-300">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-secondary-container">palette</span>
+<span class="font-mono-metric text-[11px]">RGB 32bpp</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-tertiary">check_circle</span>
+<span class="font-mono-metric text-[11px]">99.4% 置信</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Capture Tips Footer -->
+<div class="flex items-center justify-between text-on-surface-variant font-body-sm pt-1 px-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-secondary">touch_app</span>
+<span>拖拽边角可重新微调识别矩形，按住 <kbd class="px-1 py-0.2 rounded bg-surface-container text-on-surface font-mono-metric text-[10px]">Alt</kbd> 智能吸附段落</span>
+</div>
+<span class="font-mono-metric text-[11px]">内存缓冲: 2.1 MB · 零磁盘落盘</span>
+</div>
+</div>
+<!-- Right Half: OCR Text Extractor & Dual Instant Translation (5 Cols) -->
+<div class="xl:col-span-5 flex flex-col gap-space-md">
+<!-- Upper Card: Editable OCR Extracted Raw Text -->
+<div class="bg-surface-container-low rounded-xl p-space-md shadow-sm flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-body-md">format_quote</span>
+<span class="font-headline-sm text-body-sm text-on-surface">提取文本 (支持即时校验修正)</span>
+</div>
+<div class="flex items-center gap-1">
+<button class="flex items-center gap-1 px-2 py-1 rounded hover:bg-surface-container-high text-on-surface-variant text-body-sm transition-colors" id="btn-copy-src" title="复制原文">
+<span class="material-symbols-outlined text-[15px]">content_copy</span>
+<span class="font-mono-metric text-[11px]">复制</span>
+</button>
+<button class="flex items-center gap-1 px-2 py-1 rounded hover:bg-surface-container-high text-on-surface-variant text-body-sm transition-colors" id="btn-clear-src" title="清空">
+<span class="material-symbols-outlined text-[15px]">backspace</span>
+</button>
+</div>
+</div>
+<div class="relative">
+<textarea class="w-full bg-surface-container-lowest text-on-surface font-mono-metric text-body-sm p-space-sm rounded-lg focus:outline-none focus:bg-surface-container-lowest resize-none shadow-sm transition-all" id="ocr-source-input" placeholder="在此编辑修正 OCR 识别字符..." rows="4">ERROR 503: Service Unavailable. The local backend failed to establish IPC handshake with sidecar within 5000ms.</textarea>
+<div class="absolute bottom-2 right-2 flex items-center gap-1 text-[11px] font-mono-metric text-on-surface-variant bg-surface-container-lowest/80 px-1 rounded">
+<span id="char-count">105</span> 字符 · EN-US
+            </div>
+</div>
+</div>
+<!-- Lower Card: Hy-MT2 AI Neural Dual Translation Output -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-md flex flex-col gap-space-sm relative overflow-hidden">
+<!-- Subtle Accent Ambient Tint -->
+<div class="absolute -top-16 -right-16 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none"></div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-body-md">auto_awesome</span>
+<span class="font-headline-sm text-body-sm text-on-surface">Hy-MT2 极速译文</span>
+<span class="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-mono-metric text-[10px] font-semibold">18ms 本地生成</span>
+</div>
+<div class="flex items-center gap-1">
+<button class="p-1.5 rounded-full text-on-surface-variant hover:text-primary hover:bg-primary-fixed transition-colors" id="btn-listen" title="语音朗读">
+<span class="material-symbols-outlined text-[16px]">volume_up</span>
+</button>
+<button class="flex items-center gap-1 px-2 py-1 rounded bg-secondary-fixed text-on-secondary-fixed-variant hover:opacity-90 transition-opacity" id="btn-copy-target">
+<span class="material-symbols-outlined text-[14px]">content_copy</span>
+<span class="font-headline-sm text-[11px]">复制译文</span>
+</button>
+</div>
+</div>
+<!-- Dual Translation Result Box -->
+<div class="p-space-md rounded-lg bg-surface-container-low text-on-surface flex flex-col gap-space-xs">
+<p class="font-body-lg text-body-lg text-on-surface leading-relaxed font-medium" id="target-translation-text">
+              错误 503：服务不可用。本地后端未能与 sidecar 子进程在 5000 毫秒内建立 IPC 握手通信。
+            </p>
+<!-- Linguistic Breakdown Pills -->
+<div class="flex items-center gap-1.5 flex-wrap pt-2">
+<span class="px-2 py-0.5 rounded bg-surface-container font-mono-metric text-[11px] text-on-surface-variant">
+                IPC 握手 (Inter-Process Communication)
+              </span>
+<span class="px-2 py-0.5 rounded bg-surface-container font-mono-metric text-[11px] text-on-surface-variant">
+                Sidecar (伴生辅助容器/进程)
+              </span>
+<span class="px-2 py-0.5 rounded bg-surface-container font-mono-metric text-[11px] text-on-surface-variant">
+                5000ms (超时阈值)
+              </span>
+</div>
+</div>
+<!-- Action Toolbar for Results -->
+<div class="grid grid-cols-3 gap-space-xs pt-1">
+<button class="flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-headline-sm text-body-sm transition-colors" id="btn-save-vocab" type="button">
+<span class="material-symbols-outlined text-[16px] text-primary">bookmark_add</span>
+<span class="truncate">存入报错/生词库</span>
+</button>
+<button class="flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-headline-sm text-body-sm transition-colors" id="btn-replace" type="button">
+<span class="material-symbols-outlined text-[16px] text-secondary">sync_alt</span>
+<span class="truncate">逆向翻译校验</span>
+</button>
+<button class="flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-headline-sm text-body-sm transition-colors" id="btn-re-infer" type="button">
+<span class="material-symbols-outlined text-[16px] text-tertiary">refresh</span>
+<span class="truncate">重试识别</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Configuration Drawer / Engine Settings -->
+<div class="bg-surface-container rounded-xl p-space-md shadow-sm flex flex-col md:flex-row items-center justify-between gap-space-md">
+<!-- Left Config Controls -->
+<div class="flex items-center gap-space-lg flex-wrap w-full md:w-auto">
+<!-- Language Pairs Dropdown Mock -->
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-body-md">language</span>
+<span class="font-headline-sm text-body-sm text-on-surface">OCR 语言包:</span>
+<div class="relative inline-flex items-center">
+<select class="appearance-none bg-surface-container-lowest text-on-surface font-body-sm pl-space-sm pr-7 py-1 rounded-lg focus:outline-none shadow-sm cursor-pointer">
+<option>中英双向混合识别 (内置高精度原生模型)</option>
+<option>日英混合识别 (Japanese-English)</option>
+<option>代码与符号增强模式 (Code & Regex Optimized)</option>
+<option>多语言通用纯净识别 (All Latin & CJK)</option>
+</select>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant absolute right-2 pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Auto-clean Line Breaks Switch -->
+<label class="flex items-center gap-space-xs cursor-pointer select-none">
+<div class="relative inline-flex items-center">
+<input checked="" class="sr-only peer" id="toggle-clean-breaks" type="checkbox"/>
+<div class="w-9 h-5 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</div>
+<span class="font-body-sm text-on-surface">自动合并断行 <span class="text-on-surface-variant font-mono-metric text-[11px]">(去除 PDF/代码换行空格)</span></span>
+</label>
+</div>
+<!-- Right Privacy & Telemetry Guarantee -->
+<div class="flex items-center gap-space-xs text-on-surface-variant font-body-sm shrink-0">
+<span class="material-symbols-outlined text-tertiary text-[18px]">verified_user</span>
+<span class="font-mono-metric text-[12px]">隐私保护：截图仅在内存中临时处理，翻译后自动清空，不写入磁盘永久文件</span>
+</div>
+</div>
+</div>
+</div>
+<script>
+  (function initScreenOcrWorkspace() {
+    const textarea = document.getElementById('ocr-source-input');
+    const charCount = document.getElementById('char-count');
+    const targetText = document.getElementById('target-translation-text');
+    const btnCapture = document.getElementById('btn-capture');
+    const btnClear = document.getElementById('btn-clear');
+    const btnCopySrc = document.getElementById('btn-copy-src');
+    const btnCopyTarget = document.getElementById('btn-copy-target');
+    const btnSaveVocab = document.getElementById('btn-save-vocab');
+    const btnReInfer = document.getElementById('btn-re-infer');
+
+    if (textarea && charCount) {
+      textarea.addEventListener('input', () => {
+        charCount.textContent = textarea.value.length;
+      });
+    }
+
+    if (btnCopyTarget && targetText) {
+      btnCopyTarget.addEventListener('click', () => {
+        navigator.clipboard.writeText(targetText.textContent.trim());
+        const originalHtml = btnCopyTarget.innerHTML;
+        btnCopyTarget.innerHTML = '<span class="material-symbols-outlined text-[14px]">check</span><span class="font-headline-sm text-[11px]">已复制</span>';
+        setTimeout(() => {
+          btnCopyTarget.innerHTML = originalHtml;
+        }, 1600);
+      });
+    }
+
+    if (btnCopySrc && textarea) {
+      btnCopySrc.addEventListener('click', () => {
+        navigator.clipboard.writeText(textarea.value);
+        const originalText = btnCopySrc.querySelector('span:last-child').textContent;
+        btnCopySrc.querySelector('span:last-child').textContent = '已复制';
+        setTimeout(() => {
+          btnCopySrc.querySelector('span:last-child').textContent = originalText;
+        }, 1500);
+      });
+    }
+
+    if (btnClear && textarea && targetText) {
+      btnClear.addEventListener('click', () => {
+        textarea.value = '';
+        charCount.textContent = '0';
+        targetText.textContent = '等待捕获新区域或输入文字...';
+      });
+    }
+
+    if (btnSaveVocab) {
+      btnSaveVocab.addEventListener('click', () => {
+        btnSaveVocab.classList.add('bg-primary-container', 'text-on-primary-container');
+        setTimeout(() => {
+          btnSaveVocab.classList.remove('bg-primary-container', 'text-on-primary-container');
+        }, 1200);
+      });
+    }
+
+    if (btnReInfer && textarea) {
+      btnReInfer.addEventListener('click', () => {
+        btnReInfer.classList.add('animate-spin');
+        setTimeout(() => {
+          btnReInfer.classList.remove('animate-spin');
+        }, 600);
+      });
+    }
+  })();
+</script></main></div></body></html>

@@ -1,0 +1,25 @@
+# macOS & OS artifacts
+.DS_Store
+Thumbs.db
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# SQLite WAL / SHM runtime files
+data/*.db-shm
+data/*.db-wal
+*.part
+
+# Rust / Tauri build intermediates
+src-tauri/target/
+node_modules/
+
+# Intermediate staging directories in dist/ (keep dist/installers/ tracked)
+dist/AppIcon.iconset/
+dist/generate_app_icons
+dist/windows-x64-staging/
+dist/macos-arm64/
+dist/macos-x64/
+dist/macos-universal/

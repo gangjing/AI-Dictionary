@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <!-- Primary Adaptive Gradient (Works on both Dark & Light backgrounds) -->
+    <linearGradient id="aidict-bg" x1="12" y1="8" x2="116" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2563EB" />
+      <stop offset="52%" stop-color="#1D4ED8" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+
+    <!-- Cyan/Sky Accent Gradient for Right Page & AI Spark -->
+    <linearGradient id="aidict-cyan" x1="56" y1="26" x2="104" y2="96" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#60A5FA" />
+    </linearGradient>
+
+    <!-- Gold/Amber Spark Highlight -->
+    <linearGradient id="aidict-spark" x1="82" y1="18" x2="106" y2="42" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FDE047" />
+      <stop offset="100%" stop-color="#38BDF8" />
+    </linearGradient>
+
+    <!-- Inner Specular Border for Crisp Separation in Both Light & Dark Modes -->
+    <linearGradient id="aidict-rim" x1="64" y1="4" x2="64" y2="124" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.42" />
+      <stop offset="100%" stop-color="#38BDF8" stop-opacity="0.22" />
+    </linearGradient>
+  </defs>
+
+  <!-- macOS / Win11 Continuous Squircle Container -->
+  <rect x="6" y="6" width="116" height="116" rx="28" fill="url(#aidict-bg)" />
+  <rect x="7" y="7" width="114" height="114" rx="27" stroke="url(#aidict-rim)" stroke-width="2" />
+
+  <!-- Subtle Ambient Top Glow -->
+  <circle cx="94" cy="30" r="28" fill="#38BDF8" fill-opacity="0.18" />
+
+  <!-- Open Lexicon Book — Left Wing (Crisp White for English 'A') -->
+  <path
+    d="M26 38C26 34.6863 28.6863 32 32 32H54C59.5228 32 64 36.4772 64 42V96C64 92.6863 59.5228 90 54 90H32C28.6863 90 26 87.3137 26 84V38Z"
+    fill="#FFFFFF"
+    fill-opacity="0.96"
+  />
+
+  <!-- Open Lexicon Book — Right Wing (Luminous Sky Cyan for Chinese/AI Layer) -->
+  <path
+    d="M102 38C102 34.6863 99.3137 32 96 32H74C68.4772 32 64 36.4772 64 42V96C64 92.6863 68.4772 90 74 90H96C99.3137 90 102 87.3137 102 84V38Z"
+    fill="url(#aidict-cyan)"
+    fill-opacity="0.92"
+  />
+
+  <!-- Book Bottom Spine & Page Fold Accent -->
+  <path
+    d="M30 96C42 96 55 98 64 103C73 98 86 96 98 96"
+    stroke="#93C5FD"
+    stroke-width="3.5"
+    stroke-linecap="round"
+  />
+
+  <!-- Left Page Typography Glyph: Bold Architectural "A" -->
+  <path
+    d="M45 46L35.5 74H40.8L42.6 68H47.4L49.2 74H54.5L45 46ZM43.8 63.2L45 58.5L46.2 63.2H43.8Z"
+    fill="#1E3A8A"
+  />
+
+  <!-- Right Page Bilingual/Semantic Lines ("文" / Neural Alignment Bars) -->
+  <rect x="72" y="49" width="20" height="4.2" rx="2.1" fill="#0F172A" fill-opacity="0.85" />
+  <rect x="72" y="59" width="15" height="4.2" rx="2.1" fill="#0F172A" fill-opacity="0.75" />
+  <rect x="72" y="69" width="18" height="4.2" rx="2.1" fill="#0F172A" fill-opacity="0.85" />
+
+  <!-- AI Neural Spark Star (Top-Right Corner of the Lexicon) -->
+  <path
+    d="M95 16L97.6 24.4L106 27L97.6 29.6L95 38L92.4 29.6L84 27L92.4 24.4L95 16Z"
+    fill="url(#aidict-spark)"
+  />
+</svg>

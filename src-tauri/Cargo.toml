@@ -1,0 +1,47 @@
+[package]
+name = "ai-dictionary"
+version = "1.0.0"
+description = "Windows / macOS Offline-First Local AI Dictionary powered by Hy-MT2"
+authors = ["AI Dictionary Team"]
+license = "Apache-2.0"
+edition = "2021"
+
+[lib]
+name = "ai_dictionary_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.1.0", features = ["tray-icon", "macos-private-api"] }
+tauri-plugin-global-shortcut = "2.0.0"
+tauri-plugin-shell = "2.0.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.40", features = ["full"] }
+tokio-util = "0.7"
+rusqlite = { version = "0.32", features = ["bundled"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream", "json"] }
+sha2 = "0.10"
+hex = "0.4"
+lru = "0.12"
+unicode-normalization = "0.1"
+uuid = { version = "1.10", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+thiserror = "1.0"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.10"
+core-graphics = "0.24"
+objc2 = "0.5"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.58", features = [
+    "UI_Automation",
+    "Media_Ocr",
+    "Graphics_Imaging",
+    "Media_SpeechSynthesis",
+] }

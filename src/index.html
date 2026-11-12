@@ -1,0 +1,1918 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Dictionary — 本地离线词典与翻译</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
+  <style>
+    :root {
+      --bg-app: #121316;
+      --bg-sidebar: #181a1f;
+      --bg-card: #1e2026;
+      --bg-input: #14161b;
+      --bg-hover: #262932;
+      --border: #2e323d;
+      --text-main: #f3f4f6;
+      --text-sub: #9ca3af;
+      --text-muted: #6b7280;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    }
+
+    body.light-mode {
+      --bg-app: #f4f5f7;
+      --bg-sidebar: #ffffff;
+      --bg-card: #ffffff;
+      --bg-input: #f9fafb;
+      --bg-hover: #f1f5f9;
+      --border: #e2e8f0;
+      --text-main: #111827;
+      --text-sub: #4b5563;
+      --text-muted: #6b7280;
+      --primary: #0067c0;
+      --primary-hover: #005299;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Guarantee all inputs, textareas, and selects are high-contrast in BOTH Dark & Light Mode */
+    input[type="text"],
+    input[type="search"],
+    textarea,
+    select {
+      background-color: var(--bg-input) !important;
+      color: var(--text-main) !important;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-family: var(--font-sans);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input[type="text"]::placeholder,
+    textarea::placeholder {
+      color: var(--text-muted) !important;
+      opacity: 1;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--primary);
+    }
+
+    /* =========================================================
+       Youdao-Style Cross-Platform System Info Bar (macOS Menu Bar & Windows Tray)
+       ========================================================= */
+    .system-infobar {
+      height: 32px;
+      background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%);
+      color: #f8fafc;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      font-size: 12px;
+      flex-shrink: 0;
+      user-select: none;
+      z-index: 250;
+    }
+
+    body.light-mode .system-infobar {
+      background: linear-gradient(90deg, #e2e8f0 0%, #cbd5e1 100%);
+      color: #0f172a;
+      border-bottom: 1px solid #94a3b8;
+    }
+
+    .infobar-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tray-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 6px;
+      background: rgba(59, 130, 246, 0.22);
+      border: 1px solid rgba(96, 165, 250, 0.45);
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.14s;
+    }
+
+    body.light-mode .tray-pill {
+      background: #0067c0;
+      border-color: #005299;
+      color: #ffffff;
+    }
+
+    .tray-pill:hover {
+      transform: translateY(-1px);
+      background: var(--primary);
+    }
+
+    .tray-toggle-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 5px;
+      font-size: 11.5px;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.06);
+      color: inherit;
+    }
+
+    body.light-mode .tray-toggle-chip {
+      border-color: rgba(15, 23, 42, 0.2);
+      background: rgba(255, 255, 255, 0.65);
+    }
+
+    .tray-toggle-chip.on {
+      background: rgba(16, 185, 129, 0.22);
+      border-color: rgba(16, 185, 129, 0.55);
+      color: #34d399;
+      font-weight: 600;
+    }
+
+    body.light-mode .tray-toggle-chip.on {
+      background: #d1fae5;
+      border-color: #059669;
+      color: #065f46;
+    }
+
+    /* Main App Container below InfoBar */
+    .app-shell {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Minimized-to-Tray Resident Backdrop (shown when Main Window is closed via X) */
+    .tray-resident-screen {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      background: radial-gradient(circle at 50% 25%, rgba(59, 130, 246, 0.12), transparent 65%);
+      text-align: center;
+    }
+
+    .tray-resident-screen.active {
+      display: flex;
+    }
+
+    /* Youdao Dictionary Style Mini Lookup Popover (macOS NSPopover & Windows Tray Mini Window) */
+    .youdao-mini-popover {
+      position: fixed;
+      top: 40px;
+      right: 18px;
+      width: 390px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--primary);
+      border-radius: 14px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55);
+      z-index: 300;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .youdao-mini-popover.show {
+      display: flex;
+    }
+
+    /* Standalone ?mode=tray full-window mode for native NSPopover / Windows MiniForm */
+    body.tray-only-mode .system-infobar,
+    body.tray-only-mode .app-shell,
+    body.tray-only-mode #quickPillOverlay {
+      display: none !important;
+    }
+
+    body.tray-only-mode .youdao-mini-popover {
+      display: flex !important;
+      position: static !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+    }
+
+    /* Youdao Style Right-Click Tray Context Menu */
+    .tray-context-menu {
+      position: fixed;
+      top: 38px;
+      right: 18px;
+      width: 256px;
+      background-color: var(--bg-sidebar);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+      padding: 6px;
+      z-index: 350;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .tray-context-menu.show {
+      display: flex;
+    }
+
+    .tray-menu-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--text-main);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+    }
+
+    .tray-menu-item:hover {
+      background-color: var(--primary);
+      color: #ffffff;
+    }
+
+    .tray-menu-sep {
+      height: 1px;
+      background-color: var(--border);
+      margin: 4px 6px;
+    }
+
+    /* Sidebar */
+    aside {
+      width: 220px;
+      background-color: var(--bg-sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 16px 12px;
+      flex-shrink: 0;
+    }
+
+    .app-brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 4px 6px 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+
+    .brand-logo-wrap {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+      background: linear-gradient(135deg, var(--logo-bg-start, #2563EB), var(--logo-bg-end, #0F172A));
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    body.light-mode .brand-logo-wrap {
+      box-shadow: 0 4px 12px rgba(0, 103, 192, 0.22), inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+      background: linear-gradient(135deg, #1D4ED8, #1E3A8A);
+    }
+
+    .app-brand:hover .brand-logo-wrap {
+      transform: translateY(-1px) scale(1.02);
+    }
+
+    .brand-name { font-size: 15.5px; font-weight: 700; letter-spacing: -0.01em; }
+    .brand-meta { font-size: 11px; color: var(--text-sub); margin-top: 1px; }
+
+    .nav-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 10px 12px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-sub);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.12s;
+    }
+
+    .nav-btn:hover {
+      background-color: var(--bg-hover);
+      color: var(--text-main);
+    }
+
+    .nav-btn.active {
+      background-color: var(--primary);
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .sidebar-bottom {
+      margin-top: auto;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 8px;
+      border-radius: 6px;
+      background-color: var(--bg-input);
+      border: 1px solid var(--border);
+    }
+
+    /* Main Content Area */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      height: 60px;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      background-color: var(--bg-sidebar);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      max-width: 580px;
+    }
+
+    .search-box input {
+      flex: 1;
+      height: 38px;
+    }
+
+    .btn {
+      height: 36px;
+      padding: 0 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background-color: var(--bg-card);
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-decoration: none;
+      transition: all 0.12s;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background-color: var(--bg-hover);
+      border-color: var(--primary);
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-danger {
+      background-color: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #f87171;
+    }
+
+    .viewport {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    .page-view {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+
+    .page-view.active {
+      display: flex;
+    }
+
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-family: var(--font-mono);
+      background-color: var(--bg-input);
+      color: var(--text-sub);
+      border: 1px solid var(--border);
+    }
+
+    .tag.blue {
+      background-color: rgba(59, 130, 246, 0.14);
+      color: #60a5fa;
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    .tag.green {
+      background-color: rgba(16, 185, 129, 0.14);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    /* Word Entry Typography */
+    .word-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .headword {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .phonetics-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+      font-size: 13.5px;
+      color: var(--text-sub);
+    }
+
+    .sense-row {
+      padding: 10px 0;
+      border-bottom: 1px dashed var(--border);
+      line-height: 1.6;
+    }
+
+    .sense-row:last-child { border-bottom: none; }
+
+    .pos-badge {
+      display: inline-block;
+      min-width: 42px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    /* Two-column translation layout */
+    .trans-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 800px) {
+      .trans-grid { grid-template-columns: 1fr; }
+    }
+
+    .trans-textarea {
+      width: 100%;
+      height: 260px;
+      resize: vertical;
+      line-height: 1.65;
+      font-size: 14.5px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    th, td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+
+    th {
+      color: var(--text-sub);
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    /* Floating Quick Lookup Card */
+    .popup-card {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      width: 360px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--primary);
+      border-radius: 12px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+      padding: 16px;
+      z-index: 100;
+      display: none;
+    }
+
+    .popup-card.show { display: block; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: var(--primary);
+      color: #ffffff;
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+      z-index: 400;
+      display: none;
+    }
+
+    .toast.show { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- =========================================================
+       TOP SYSTEM INFO BAR (macOS Menu Bar & Windows System Tray Interactive Bar)
+       Models Youdao Dictionary's resident Menu Bar / Notification Area experience
+       ========================================================= -->
+  <div class="system-infobar" id="systemInfoBar">
+    <div class="infobar-group">
+      <span style="font-weight:700; opacity:0.9;">🍎 macOS 菜单栏 / 🪟 Windows 信息栏常驻：</span>
+      <span id="windowStateIndicator" class="tag green" style="height:20px; font-size:11px;">主窗口运行中 (关闭窗口不退出)</span>
+      <button class="tray-toggle-chip on" id="chipScreenSelection" onclick="toggleTrayFeature('screen_selection_enabled')" title="参考有道词典：鼠标选中文字即刻取词">
+        ✓ 划词取词
+      </button>
+      <button class="tray-toggle-chip" id="chipClipboardCapture" onclick="toggleTrayFeature('clipboard_capture_enabled')" title="参考有道词典：复制文本自动弹窗查词">
+        剪贴板取词
+      </button>
+    </div>
+
+    <div class="infobar-group">
+      <button class="tray-pill" id="macMenuBarIconBtn" onclick="toggleYoudaoMiniPopover()" oncontextmenu="event.preventDefault(); toggleTrayContextMenu();" title="左键：弹出有道式迷你查词栏 | 右键：弹出系统托盘菜单">
+        <img src="/assets/logo.svg" alt="icon" width="15" height="15" style="border-radius:3px;" />
+        <span>📖 AI词典 (左键迷你查词)</span>
+      </button>
+      <button class="tray-toggle-chip" id="trayMenuBtn" onclick="toggleTrayContextMenu()" title="打开 macOS 菜单栏 / Windows 右下角托盘右键菜单">
+        ▾ 托盘右键菜单
+      </button>
+      <button class="tray-toggle-chip" style="border-color:rgba(248,113,113,0.45); color:#fca5a5;" onclick="closeMainWindowToTray()" id="simCloseToTrayBtn" title="模拟点击窗口右上角/左上角 × 关闭按钮：隐藏主窗口并驻留信息栏">
+        ✕ 关闭主窗口 (驻留信息栏)
+      </button>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       YOUDAO-STYLE MINI LOOKUP POPOVER (macOS Menu Bar NSPopover & Windows Tray Mini Window)
+       ========================================================= -->
+  <div id="youdaoMiniPopover" class="youdao-mini-popover">
+    <!-- Popover Top Bar (Youdao Style Quick Switches) -->
+    <div style="padding:10px 14px; background:var(--bg-sidebar); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
+      <div style="display:flex; align-items:center; gap:7px;">
+        <img src="/assets/logo.svg" alt="logo" width="20" height="20" style="border-radius:5px;" />
+        <strong style="font-size:13.5px;">AI 词典 · 迷你查词栏</strong>
+      </div>
+      <div style="display:flex; align-items:center; gap:5px;">
+        <button class="tray-toggle-chip on" id="miniChipSelection" onclick="toggleTrayFeature('screen_selection_enabled')" style="font-size:11px; padding:2px 6px;">✓ 划词</button>
+        <button class="tray-toggle-chip" id="miniChipClipboard" onclick="toggleTrayFeature('clipboard_capture_enabled')" style="font-size:11px; padding:2px 6px;">取词</button>
+        <button class="btn" style="height:24px; padding:0 8px; font-size:11.5px;" onclick="restoreMainWindowFromTray('dictionary')" title="打开 AI 词典完整主窗口">↗ 主窗口</button>
+      </div>
+    </div>
+
+    <!-- Popover Search & Instant Translate Input -->
+    <div style="padding:12px 14px; border-bottom:1px solid var(--border); background:var(--bg-card);">
+      <div style="display:flex; gap:6px;">
+        <input
+          id="trayMiniInput"
+          type="text"
+          value="ubiquitous"
+          style="flex:1; height:36px; font-size:13.5px;"
+          placeholder="输入单词查词，或输入长句直接 AI 翻译..."
+          onkeydown="if(event.key==='Enter') runTrayMiniQuery()"
+        />
+        <button class="btn btn-primary" style="height:36px; padding:0 12px;" onclick="runTrayMiniQuery()">查询</button>
+      </div>
+      <div style="display:flex; gap:6px; margin-top:8px; font-size:11.5px; color:var(--text-sub); align-items:center;">
+        <span>热词：</span>
+        <a href="javascript:void(0)" style="color:var(--primary); text-decoration:none;" onclick="quickTrayMiniWord('ubiquitous')">ubiquitous</a>
+        <a href="javascript:void(0)" style="color:var(--primary); text-decoration:none;" onclick="quickTrayMiniWord('paradigm')">paradigm</a>
+        <a href="javascript:void(0)" style="color:var(--primary); text-decoration:none;" onclick="quickTrayMiniWord('ephemeral')">ephemeral</a>
+        <a href="javascript:void(0)" style="color:var(--primary); text-decoration:none;" onclick="quickTrayMiniWord('人工智能')">人工智能</a>
+      </div>
+    </div>
+
+    <!-- Popover Result Body -->
+    <div id="trayMiniResultBody" style="padding:14px; max-height:310px; overflow-y:auto; font-size:13.5px; line-height:1.6;"></div>
+
+    <!-- Popover Bottom Action Bar (Youdao Style) -->
+    <div style="padding:8px 14px; background:var(--bg-sidebar); border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; font-size:12px;">
+      <div style="display:flex; gap:6px;">
+        <button class="btn" style="height:26px; padding:0 8px; font-size:11.5px;" onclick="restoreMainWindowFromTray('ocr')">📸 截图OCR</button>
+        <button class="btn" style="height:26px; padding:0 8px; font-size:11.5px;" onclick="restoreMainWindowFromTray('wordbook')">⭐ 生词本</button>
+        <button class="btn" style="height:26px; padding:0 8px; font-size:11.5px;" onclick="restoreMainWindowFromTray('models')">⚙️ 设置</button>
+      </div>
+      <button class="btn" style="height:26px; padding:0 8px; font-size:11.5px;" onclick="closeYoudaoMiniPopover()">收起</button>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       YOUDAO-STYLE TRAY RIGHT-CLICK CONTEXT MENU (macOS NSMenu & Windows ContextMenuStrip)
+       ========================================================= -->
+  <div id="trayContextMenu" class="tray-context-menu">
+    <button class="tray-menu-item" onclick="openYoudaoMiniPopover(); hideTrayContextMenu();">
+      <span>🔍 打开迷你查词小窗</span>
+      <span style="font-size:11px; opacity:0.65;">⌥⌘M</span>
+    </button>
+    <button class="tray-menu-item" onclick="restoreMainWindowFromTray('dictionary'); hideTrayContextMenu();">
+      <span>📖 显示 AI 词典主窗口</span>
+      <span style="font-size:11px; opacity:0.65;">⌥⌘D</span>
+    </button>
+    <div class="tray-menu-sep"></div>
+    <button class="tray-menu-item" onclick="toggleTrayFeature('screen_selection_enabled'); hideTrayContextMenu();">
+      <span id="menuLabelSelection">✓ 屏幕划词翻译 (Screen Capture)</span>
+      <span class="tag green" style="font-size:10px; padding:1px 5px;">常驻</span>
+    </button>
+    <button class="tray-menu-item" onclick="toggleTrayFeature('clipboard_capture_enabled'); hideTrayContextMenu();">
+      <span id="menuLabelClipboard">  剪贴板自动查词 (Clipboard)</span>
+      <span style="font-size:11px; opacity:0.65;">复制即查</span>
+    </button>
+    <button class="tray-menu-item" onclick="restoreMainWindowFromTray('ocr'); hideTrayContextMenu();">
+      <span>📸 区域截图 OCR 翻译</span>
+      <span style="font-size:11px; opacity:0.65;">⌥⌘S</span>
+    </button>
+    <button class="tray-menu-item" onclick="togglePrivacyMode(!document.getElementById('privacyModeSwitch').checked); hideTrayContextMenu();">
+      <span id="menuLabelPrivacy">  私密无痕查词模式</span>
+      <span style="font-size:11px; opacity:0.65;">不留历史</span>
+    </button>
+    <div class="tray-menu-sep"></div>
+    <button class="tray-menu-item" onclick="restoreMainWindowFromTray('models'); hideTrayContextMenu();">
+      <span>⚙️ 偏好设置与词库管理...</span>
+      <span style="font-size:11px; opacity:0.65;">⌘,</span>
+    </button>
+    <div class="tray-menu-sep"></div>
+    <button class="tray-menu-item" style="color:#f87171;" onclick="explicitQuitApplication()">
+      <span>🚪 完全退出 AI 词典</span>
+      <span style="font-size:11px; opacity:0.65;">⌘Q</span>
+    </button>
+  </div>
+
+  <!-- =========================================================
+       RESIDENT BACKGROUND STATE VIEW (When Main Window is Hidden to InfoBar / System Tray)
+       ========================================================= -->
+  <div id="trayResidentScreen" class="tray-resident-screen">
+    <div class="card" style="max-width:620px; width:100%; text-align:left; border-color:var(--primary);">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+        <img src="/assets/logo.svg" alt="logo" width="44" height="44" style="border-radius:10px;" />
+        <div>
+          <h2 style="font-size:19px; font-weight:700;">AI 词典已最小化至系统信息栏 / 托盘（后台常驻运行中）</h2>
+          <p style="font-size:13px; color:var(--text-sub); margin-top:2px;">
+            采用有道词典双平台交互设计：关闭主窗口不会中断后台划词、截图 OCR 与迷你查词服务。
+          </p>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; font-size:13px;">
+        <div style="padding:12px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px;">
+          <div style="font-weight:700; margin-bottom:4px;">🍎 macOS 顶部菜单栏 (Menu Bar)</div>
+          <div style="color:var(--text-sub); line-height:1.55;">
+            • 点击红灯 <code>×</code> 仅隐藏主窗口 (`windowShouldClose -> orderOut`)<br/>
+            • <strong>左键点击</strong>顶部 <code>📖 AI词典</code> 图标弹出迷你查词窗<br/>
+            • <strong>右键点击</strong>打开快捷开关与完全退出菜单
+          </div>
+        </div>
+        <div style="padding:12px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px;">
+          <div style="font-weight:700; margin-bottom:4px;">🪟 Windows 右下角系统托盘 (NotifyIcon)</div>
+          <div style="color:var(--text-sub); line-height:1.55;">
+            • 点击右上角 <code>×</code> 自动转入右下角托盘并弹出气泡提示<br/>
+            • <strong>左键单击</strong>托盘图标呼出置顶迷你查词栏<br/>
+            • <strong>双击</strong>恢复主窗口，<strong>右键</strong>打开托盘菜单
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-end;">
+        <button class="btn" onclick="openYoudaoMiniPopover()">🔍 弹出信息栏迷你查词窗</button>
+        <button class="btn" onclick="toggleTrayContextMenu()">▾ 打开托盘右键菜单</button>
+        <button class="btn btn-primary" onclick="restoreMainWindowFromTray('dictionary')">📖 恢复显示主窗口</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MAIN WORKSPACE SHELL
+       ========================================================= -->
+  <div class="app-shell" id="mainAppShell">
+
+    <!-- Left Navigation Sidebar -->
+    <aside>
+      <div class="app-brand">
+        <div class="brand-logo-wrap" title="AI Dictionary — Local Hy-MT2 Lexicon">
+          <svg width="36" height="36" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="logo-cyan" x1="56" y1="26" x2="104" y2="96" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#38BDF8" />
+                <stop offset="100%" stop-color="#60A5FA" />
+              </linearGradient>
+              <linearGradient id="logo-spark" x1="82" y1="18" x2="106" y2="42" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#FDE047" />
+                <stop offset="100%" stop-color="#38BDF8" />
+              </linearGradient>
+            </defs>
+            <circle cx="94" cy="30" r="28" fill="#38BDF8" fill-opacity="0.20" />
+            <path d="M22 36C22 32.6863 24.6863 30 28 30H53C59.0751 30 64 34.9249 64 41V96C64 92.134 59.0751 89 53 89H28C24.6863 89 22 86.3137 22 83V36Z" fill="#FFFFFF" fill-opacity="0.96" />
+            <path d="M106 36C106 32.6863 103.314 30 100 30H75C68.9249 30 64 34.9249 64 41V96C64 92.134 68.9249 89 75 89H100C103.314 89 106 86.3137 106 83V36Z" fill="url(#logo-cyan)" fill-opacity="0.94" />
+            <path d="M28 96C41 96 54 98.5 64 104C74 98.5 87 96 100 96" stroke="#93C5FD" stroke-width="4" stroke-linecap="round" />
+            <path d="M43.5 44L33.5 73H39.2L41.1 66.8H46.1L48 73H53.7L43.5 44ZM42.3 61.8L43.6 56.8L44.9 61.8H42.3Z" fill="#1E3A8A" />
+            <rect x="72" y="48" width="22" height="4.5" rx="2.25" fill="#0F172A" fill-opacity="0.88" />
+            <rect x="72" y="58.5" width="16" height="4.5" rx="2.25" fill="#0F172A" fill-opacity="0.78" />
+            <rect x="72" y="69" width="19.5" height="4.5" rx="2.25" fill="#0F172A" fill-opacity="0.88" />
+            <path d="M97 14L99.8 22.8L108.5 25.5L99.8 28.2L97 37L94.2 28.2L85.5 25.5L94.2 22.8L97 14Z" fill="url(#logo-spark)" />
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">AI Dictionary</div>
+          <div class="brand-meta" id="dictCountBadge">14,625 公开词条已内置</div>
+        </div>
+      </div>
+
+      <div class="nav-list">
+        <button class="nav-btn active" id="nav-dictionary" onclick="switchPage('dictionary', this)">
+          <span>1. 查词</span>
+          <span style="font-size:11px; opacity:0.75;">词典</span>
+        </button>
+        <button class="nav-btn" id="nav-translate" onclick="switchPage('translate', this)">
+          <span>2. 翻译</span>
+          <span style="font-size:11px; opacity:0.75;">Hy-MT2</span>
+        </button>
+        <button class="nav-btn" id="nav-ocr" onclick="switchPage('ocr', this)">
+          <span>3. 截图 OCR</span>
+          <span style="font-size:11px; opacity:0.75;">识别</span>
+        </button>
+        <button class="nav-btn" id="nav-wordbook" onclick="switchPage('wordbook', this)">
+          <span>4. 生词本</span>
+          <span id="sidebarWordCount" style="font-size:11px; opacity:0.85;">0</span>
+        </button>
+        <button class="nav-btn" id="nav-history" onclick="switchPage('history', this)">
+          <span>5. 历史记录</span>
+          <span style="font-size:11px; opacity:0.75;">本地</span>
+        </button>
+        <button class="nav-btn" id="nav-models" onclick="switchPage('models', this)">
+          <span>6. 设置与词库</span>
+          <span style="font-size:11px; opacity:0.75;">管理</span>
+        </button>
+      </div>
+
+      <div class="sidebar-bottom">
+        <div class="status-row">
+          <span>本地离线引擎</span>
+          <span class="tag green" id="sidebarModelTag">就绪</span>
+        </div>
+        <label class="status-row" style="cursor:pointer;" title="开启后不保存任何查询与翻译历史">
+          <span>私密模式 (不留痕)</span>
+          <input type="checkbox" id="privacyModeSwitch" onchange="togglePrivacyMode(this.checked)" />
+        </label>
+        <button class="btn" style="width:100%;" onclick="toggleColorMode()" id="themeBtn">
+          切换浅色 / 深色模式
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main>
+      <header>
+        <div class="search-box">
+          <input
+            id="dictSearchInput"
+            type="text"
+            value="absorb"
+            placeholder="输入英文或中文查词（已内置 14,625 条四六级/考研/托福/SAT 公开词典，回车即查）..."
+            onkeydown="if(event.key==='Enter') performLookup()"
+          />
+          <button class="btn btn-primary" onclick="performLookup()">查词</button>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" onclick="toggleYoudaoMiniPopover()">🔍 信息栏迷你窗</button>
+          <button class="btn" onclick="toggleQuickPillOverlay()">划词小窗 (⌥⌘T)</button>
+        </div>
+      </header>
+
+      <div class="viewport">
+
+        <!-- =========================================================
+             PAGE 1: 查词 (Dictionary Lookup)
+             ========================================================= -->
+        <section id="page-dictionary" class="page-view active">
+          <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:12px; color:var(--text-sub);">
+            <span>常用词快速体验：</span>
+            <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="quickSelectWord('absorb')">absorb</button>
+            <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="quickSelectWord('academic')">academic</button>
+            <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="quickSelectWord('access')">access</button>
+            <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="quickSelectWord('resilience')">resilience</button>
+            <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="quickSelectWord('running')">running (变形还原)</button>
+            <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="quickSelectWord('abandon')">abandon</button>
+            <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="quickSelectWord('人工智能')">人工智能</button>
+          </div>
+
+          <div id="dictMainColumn"></div>
+        </section>
+
+        <!-- =========================================================
+             PAGE 2: 翻译 (AI Translation — High-Contrast Fixed!)
+             ========================================================= -->
+        <section id="page-translate" class="page-view">
+          <div class="card">
+            <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <select id="transSourceLang">
+                  <option value="auto">自动检测语言</option>
+                  <option value="en">英语 (EN)</option>
+                  <option value="zh">简体中文 (ZH)</option>
+                </select>
+                <button class="btn" onclick="swapTranslateLangs()" title="互换语言">⇄</button>
+                <select id="transTargetLang">
+                  <option value="zh">简体中文 (ZH)</option>
+                  <option value="en">英语 (EN)</option>
+                </select>
+                <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text-sub); margin-left:8px; cursor:pointer;">
+                  <input type="checkbox" id="preserveFormatCheckbox" checked />
+                  <span>保留代码 / 变量 / 链接格式</span>
+                </label>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:8px;">
+                <button class="btn btn-primary" onclick="runStudioTranslation()">开始翻译</button>
+                <button class="btn btn-danger" onclick="cancelStudioTranslation()">取消</button>
+              </div>
+            </div>
+
+            <!-- Optional Glossary Row -->
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px; font-size:13px;">
+              <span style="color:var(--text-sub); white-space:nowrap;">自定义术语 (可选):</span>
+              <input
+                id="glossaryInput"
+                type="text"
+                style="flex:1; height:34px; font-size:13px;"
+                value="zero-copy=零拷贝, consensus node=共识节点, failover=故障转移"
+                placeholder="例如: term=译词, 多个用逗号分隔"
+              />
+            </div>
+
+            <!-- Dual Textboxes with Crisp Contrast in Both Dark & Light Mode -->
+            <div class="trans-grid">
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <div style="display:flex; justify-content:space-between; font-size:12.5px; color:var(--text-sub);">
+                  <span>原文</span>
+                  <a href="javascript:void(0)" onclick="document.getElementById('transStudioInput').value='';" style="color:var(--primary); text-decoration:none;">清空</a>
+                </div>
+                <textarea
+                  id="transStudioInput"
+                  class="trans-textarea"
+                  placeholder="在此粘贴或输入需要翻译的英文/中文段落..."
+                >Please verify the configuration in `tauri.conf.json` and ensure user {user_name} can access https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF within 150ms.</textarea>
+              </div>
+
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <div style="display:flex; justify-content:space-between; font-size:12.5px; color:var(--text-sub);">
+                  <span>译文 (本地 Hy-MT2)</span>
+                  <a href="javascript:void(0)" onclick="copyStudioOutput()" style="color:var(--primary); text-decoration:none;">复制译文</a>
+                </div>
+                <textarea
+                  id="transStudioOutput"
+                  class="trans-textarea"
+                  readonly
+                  placeholder="翻译结果将显示在这里..."
+                ></textarea>
+              </div>
+            </div>
+
+            <div id="transAc10StatusBadge" style="margin-top:12px; font-size:12px; color:var(--text-sub);">
+              就绪 · 本地离线翻译不会上传任何文本
+            </div>
+          </div>
+        </section>
+
+        <!-- =========================================================
+             PAGE 3: 截图 OCR (Local Vision OCR)
+             ========================================================= -->
+        <section id="page-ocr" class="page-view">
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+              <div>
+                <h2 style="font-size:17px; font-weight:700;">本地截图文字识别 (OCR)</h2>
+                <p style="font-size:13px; color:var(--text-sub); margin-top:2px;">
+                  使用系统原生离线 OCR 识别中英文文本，识别结果可直接修改并一键送入翻译。
+                </p>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button class="btn" onclick="refreshNativeOcrAndAx()">重新识别样本</button>
+                <button class="btn btn-primary" onclick="sendOcrLinesToTranslator()">将文字送入翻译</button>
+              </div>
+            </div>
+
+            <div id="ocrRecognizedList" style="display:flex; flex-direction:column; gap:10px;"></div>
+            <div id="ocrAxSecurityCard" style="margin-top:14px; font-size:12.5px; color:var(--text-sub);"></div>
+          </div>
+        </section>
+
+        <!-- =========================================================
+             PAGE 4: 生词本 (Wordbook & Review)
+             ========================================================= -->
+        <section id="page-wordbook" class="page-view">
+          <div class="card">
+            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <h2 style="font-size:17px; font-weight:700;">生词本</h2>
+                <input
+                  id="wordbookSearchInput"
+                  type="text"
+                  style="height:34px; width:220px; font-size:13px;"
+                  placeholder="搜索生词或备注..."
+                  oninput="loadWordbook(this.value)"
+                />
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                <button class="btn" onclick="importSampleJsonBatch()">导入示例词表</button>
+                <a class="btn btn-primary" href="/api/wordbook/csv" download="wordbook.csv">导出 CSV</a>
+              </div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>单词</th>
+                  <th>掌握度</th>
+                  <th>释义</th>
+                  <th>备注 (点击可改)</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="wordbookGridBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- =========================================================
+             PAGE 5: 历史记录 (Query History)
+             ========================================================= -->
+        <section id="page-history" class="page-view">
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+              <div>
+                <h2 style="font-size:17px; font-weight:700;">本地查询历史</h2>
+                <p style="font-size:12.5px; color:var(--text-sub); margin-top:2px;">
+                  仅保存在您的电脑本地；开启左侧「私密模式」后不会记录任何新查询。
+                </p>
+              </div>
+              <button class="btn btn-danger" onclick="clearAllHistory()">清空历史</button>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>类型</th>
+                  <th>查询词 / 原文</th>
+                  <th>结果摘要</th>
+                  <th>时间</th>
+                </tr>
+              </thead>
+              <tbody id="historyGridBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- =========================================================
+             PAGE 6: 设置与公开词库导入 (Settings, Tray Behavior, Models & Dictionary Import)
+             ========================================================= -->
+        <section id="page-models" class="page-view">
+          <!-- Card 0: Youdao-Style Tray & Close Window Behavior -->
+          <div class="card">
+            <h2 style="font-size:17px; font-weight:700; margin-bottom:4px;">系统信息栏 / 托盘常驻与关闭行为（参考有道词典设计）</h2>
+            <p style="font-size:12.5px; color:var(--text-sub); margin-bottom:14px;">
+              同时适配 macOS 顶部菜单栏 (`NSStatusItem` + `NSPopover`) 与 Windows 右下角系统托盘 (`NotifyIcon` + 置顶迷你窗)。
+            </p>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; font-size:13.5px;">
+              <label style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--bg-input); border-radius:8px; border:1px solid var(--border); cursor:pointer;">
+                <span>点击关闭按钮 (×) 时最小化到信息栏/托盘（不退出应用）</span>
+                <input type="checkbox" id="settingCloseToTray" checked onchange="updateCloseToTraySetting(this.checked)" />
+              </label>
+              <label style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--bg-input); border-radius:8px; border:1px solid var(--border); cursor:pointer;">
+                <span>全局屏幕划词取词 (Screen Selection)</span>
+                <input type="checkbox" id="settingScreenSelection" checked onchange="toggleTrayFeature('screen_selection_enabled')" />
+              </label>
+              <label style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--bg-input); border-radius:8px; border:1px solid var(--border); cursor:pointer;">
+                <span>剪贴板自动查词 (Clipboard Monitor)</span>
+                <input type="checkbox" id="settingClipboardCapture" onchange="toggleTrayFeature('clipboard_capture_enabled')" />
+              </label>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--bg-input); border-radius:8px; border:1px solid var(--border);">
+                <span>左键点击托盘图标动作</span>
+                <select id="settingTrayClickAction" style="height:30px; padding:2px 8px; font-size:12.5px;" onchange="saveSystemSettings()">
+                  <option value="mini_popover">弹出有道式迷你查词小窗</option>
+                  <option value="main_window">直接打开主窗口</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 1: Public Dictionary Status & One-Click Custom Import -->
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <div>
+                <h2 style="font-size:17px; font-weight:700;">默认内置公开词典与自定义导入</h2>
+                <p style="font-size:13px; color:var(--text-sub); margin-top:2px;" id="dictStatsText">
+                  已默认导入开源公开词库（初中 / 高中 / 四级 CET-4 / 六级 CET-6 / 考研 / 托福 / SAT + WordNet + CC-CEDICT），共 14,625 条词条。
+                </p>
+              </div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; margin-top:10px;">
+              <input
+                id="customDictWordInput"
+                type="text"
+                style="width:180px; height:36px;"
+                placeholder="新词条 (如 transformer)"
+              />
+              <input
+                id="customDictZhInput"
+                type="text"
+                style="flex:1; height:36px;"
+                placeholder="中文释义 (如 n. 变压器；Transformer 神经网络架构)"
+              />
+              <button class="btn btn-primary" onclick="importQuickCustomWord()">直接添加到默认词典库</button>
+            </div>
+          </div>
+
+          <!-- Card 2: Local AI Translation Models -->
+          <div class="card">
+            <h2 style="font-size:17px; font-weight:700; margin-bottom:4px;">本地 AI 翻译模型 (Hy-MT2 GGUF)</h2>
+            <p style="font-size:12.5px; color:var(--text-sub); margin-bottom:14px;">
+              卸载模型后仍可正常使用 14,625 条离线词典查词。
+            </p>
+            <div id="modelsListContainer" style="display:flex; flex-direction:column; gap:10px;"></div>
+          </div>
+
+          <!-- Card 3: Global Shortcuts -->
+          <div class="card">
+            <h2 style="font-size:17px; font-weight:700; margin-bottom:12px;">全局快捷键设置</h2>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; font-size:13.5px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--bg-input); border-radius:8px; border:1px solid var(--border);">
+                <span>划词查词快捷键</span>
+                <input id="hotkeyLookupInput" type="text" value="Option+Command+T" style="width:160px; height:32px; text-align:center;" />
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--bg-input); border-radius:8px; border:1px solid var(--border);">
+                <span>截图 OCR 快捷键</span>
+                <input id="hotkeyOcrInput" type="text" value="Option+Command+S" style="width:160px; height:32px; text-align:center;" />
+              </div>
+            </div>
+            <div style="margin-top:12px; display:flex; justify-content:flex-end; gap:8px;">
+              <button class="btn btn-primary" onclick="saveSystemSettings()">保存设置</button>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Floating Quick Lookup Popup (⌥⌘T) -->
+  <div id="quickPillOverlay" class="popup-card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <span style="display:inline-flex; align-items:center; gap:6px;">
+        <img src="/assets/logo.svg" alt="logo" width="18" height="18" style="border-radius:4px;" />
+        <span class="tag blue">划词速查 (⌥⌘T)</span>
+      </span>
+      <button class="btn" style="height:24px; padding:0 8px; font-size:11px;" onclick="toggleQuickPillOverlay()">Esc 关闭</button>
+    </div>
+    <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px;">
+      <div>
+        <strong id="pillHeadword" style="font-size:18px;">absorb</strong>
+        <span id="pillIpa" style="font-size:12px; color:var(--text-sub); margin-left:6px; font-family:var(--font-mono);"></span>
+      </div>
+      <button class="btn" style="height:26px; padding:0 8px; font-size:12px;" onclick="speakWord(document.getElementById('pillHeadword').innerText, 'us')">🔊 发音</button>
+    </div>
+    <div id="pillSensesBox" style="font-size:13px; line-height:1.55; margin-bottom:12px;"></div>
+    <div style="display:flex; justify-content:flex-end; gap:8px;">
+      <button class="btn btn-primary" style="height:28px; font-size:12px;" onclick="saveCurrentEntry()">⭐ 加入生词本</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="actionToast" class="toast">操作成功</div>
+
+  <script>
+    let currentEntry = null;
+    let latestOcrLines = [];
+    let currentTranslationReqId = '';
+    let trayState = {
+      close_to_tray: true,
+      screen_selection_enabled: true,
+      clipboard_capture_enabled: false,
+      tray_click_action: 'mini_popover'
+    };
+
+    // Detect standalone ?mode=tray (used inside macOS Menu Bar NSPopover & Windows System Tray Mini Window)
+    if (window.location.search.includes('mode=tray')) {
+      document.body.classList.add('tray-only-mode');
+    }
+
+    function postToNativeShell(payload) {
+      try {
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeShell) {
+          window.webkit.messageHandlers.nativeShell.postMessage(payload);
+        }
+      } catch (e) {}
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('actionToast');
+      t.innerText = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2400);
+    }
+
+    function toggleColorMode() {
+      document.body.classList.toggle('light-mode');
+      const isLight = document.body.classList.contains('light-mode');
+      showToast(isLight ? '已切换为浅色模式' : '已切换为深色模式');
+    }
+
+    // =========================================================
+    // Youdao Dictionary Style InfoBar / System Tray & Close-to-Tray Logic
+    // =========================================================
+    function closeMainWindowToTray() {
+      if (!trayState.close_to_tray) {
+        showToast('已按设置请求直接退出应用');
+        postToNativeShell({ action: 'quitApp' });
+        return;
+      }
+      document.getElementById('mainAppShell').style.display = 'none';
+      document.getElementById('trayResidentScreen').classList.add('active');
+      const ind = document.getElementById('windowStateIndicator');
+      ind.className = 'tag blue';
+      ind.innerText = '已隐藏至信息栏/系统托盘 (后台常驻中)';
+      postToNativeShell({ action: 'hideToTray' });
+      showToast('主窗口已隐藏至系统信息栏/托盘，点击上方「📖 AI词典」可随时查词');
+    }
+
+    function restoreMainWindowFromTray(targetPage) {
+      document.getElementById('trayResidentScreen').classList.remove('active');
+      document.getElementById('mainAppShell').style.display = 'flex';
+      closeYoudaoMiniPopover();
+      hideTrayContextMenu();
+      const ind = document.getElementById('windowStateIndicator');
+      ind.className = 'tag green';
+      ind.innerText = '主窗口运行中 (关闭窗口不退出)';
+      postToNativeShell({ action: 'showMainWindow', tab: targetPage || 'dictionary' });
+      if (targetPage) {
+        const navBtn = document.getElementById('nav-' + targetPage);
+        switchPage(targetPage, navBtn);
+      }
+    }
+
+    window.onRestoreFromTray = function() {
+      document.getElementById('trayResidentScreen').classList.remove('active');
+      document.getElementById('mainAppShell').style.display = 'flex';
+    };
+
+    window.switchTab = function(tabId) {
+      const map = { settings: 'models', dictionary: 'dictionary', translate: 'translate', ocr: 'ocr', wordbook: 'wordbook', history: 'history', models: 'models' };
+      const target = map[tabId] || 'dictionary';
+      restoreMainWindowFromTray(target);
+    };
+
+    window.focusMiniInput = function() {
+      const inp = document.getElementById('trayMiniInput');
+      if (inp) { inp.focus(); inp.select(); }
+    };
+
+    function toggleYoudaoMiniPopover() {
+      const pop = document.getElementById('youdaoMiniPopover');
+      hideTrayContextMenu();
+      if (pop.classList.contains('show')) {
+        pop.classList.remove('show');
+      } else {
+        pop.classList.add('show');
+        runTrayMiniQuery();
+        setTimeout(() => window.focusMiniInput(), 60);
+      }
+    }
+
+    function openYoudaoMiniPopover() {
+      const pop = document.getElementById('youdaoMiniPopover');
+      pop.classList.add('show');
+      runTrayMiniQuery();
+    }
+
+    function closeYoudaoMiniPopover() {
+      if (document.body.classList.contains('tray-only-mode')) return;
+      document.getElementById('youdaoMiniPopover').classList.remove('show');
+    }
+
+    function toggleTrayContextMenu() {
+      const menu = document.getElementById('trayContextMenu');
+      menu.classList.toggle('show');
+    }
+
+    function hideTrayContextMenu() {
+      document.getElementById('trayContextMenu').classList.remove('show');
+    }
+
+    function quickTrayMiniWord(w) {
+      document.getElementById('trayMiniInput').value = w;
+      runTrayMiniQuery();
+    }
+
+    async function runTrayMiniQuery() {
+      const q = (document.getElementById('trayMiniInput')?.value || '').trim();
+      const box = document.getElementById('trayMiniResultBody');
+      if (!q || !box) return;
+
+      // If input has spaces or is a sentence (>25 chars), run instant AI translation; otherwise lookup dictionary first
+      const isSentence = q.split(/\s+/).length > 3 || q.length > 28;
+      if (!isSentence) {
+        const res = await fetch('/api/lookup?q=' + encodeURIComponent(q));
+        const data = await res.json();
+        if (data.found && data.entry) {
+          const e = data.entry;
+          currentEntry = e;
+          const sensesHtml = e.senses.slice(0, 4).map(s => `
+            <div style="padding:5px 0; border-bottom:1px dashed var(--border);">
+              <span class="pos-badge">${s.pos}</span>
+              <strong>${s.zh}</strong>
+            </div>
+          `).join('');
+          box.innerHTML = `
+            <div>
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                <div>
+                  <strong style="font-size:20px;">${e.lemma}</strong>
+                  <span class="tag green" style="margin-left:6px;">${data.elapsed_ms} ms</span>
+                </div>
+                <button class="btn btn-primary" style="height:26px; padding:0 10px; font-size:12px;" onclick="saveCurrentEntry()">⭐ 收藏</button>
+              </div>
+              <div style="display:flex; gap:8px; align-items:center; font-size:12.5px; color:var(--text-sub); margin-bottom:8px;">
+                ${e.ipa_uk ? `<span>英 <code>${e.ipa_uk}</code></span>` : ''}
+                <button class="btn" style="height:24px; padding:0 8px; font-size:11.5px;" onclick="speakWord('${e.lemma}', 'uk')">🔊 英</button>
+                ${e.ipa_us ? `<span>美 <code>${e.ipa_us}</code></span>` : ''}
+                <button class="btn" style="height:24px; padding:0 8px; font-size:11.5px;" onclick="speakWord('${e.lemma}', 'us')">🔊 美</button>
+              </div>
+              <div>${sensesHtml}</div>
+            </div>
+          `;
+          return;
+        }
+      }
+
+      // Fallback or sentence: run local Hy-MT2 translation directly inside Mini Popover
+      const tRes = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          request_id: 'tray-' + Date.now(),
+          text: q,
+          source_lang: 'auto',
+          target_lang: 'zh',
+          preserve_format: true
+        })
+      });
+      const tData = await tRes.json();
+      box.innerHTML = `
+        <div style="padding:10px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px;">
+          <div style="font-size:11.5px; color:var(--text-sub); margin-bottom:4px;">本地 Hy-MT2 即时翻译 (${tData.elapsed_ms || 0} ms)</div>
+          <div style="font-weight:600; font-size:14px;">${tData.translated_text || tData.message || ''}</div>
+        </div>
+      `;
+    }
+
+    async function toggleTrayFeature(key) {
+      trayState[key] = !trayState[key];
+      syncTrayUI();
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: trayState[key] })
+      });
+      postToNativeShell({
+        action: 'syncState',
+        screen_selection_enabled: trayState.screen_selection_enabled,
+        clipboard_capture_enabled: trayState.clipboard_capture_enabled
+      });
+      const label = key === 'screen_selection_enabled' ? '屏幕划词取词' : '剪贴板自动查词';
+      showToast(`${label}已${trayState[key] ? '开启' : '关闭'}`);
+    }
+
+    window.syncTrayFlag = function(key, val) {
+      if (key === 'privacy_mode') {
+        document.getElementById('privacyModeSwitch').checked = val;
+        togglePrivacyMode(val);
+        return;
+      }
+      trayState[key] = val;
+      syncTrayUI();
+    };
+
+    function updateCloseToTraySetting(enabled) {
+      trayState.close_to_tray = enabled;
+      postToNativeShell({ action: 'setCloseToTray', enabled });
+      fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ close_to_tray: enabled })
+      });
+      showToast(enabled ? '已开启：关闭窗口时最小化到信息栏/系统托盘' : '已设为：关闭窗口时直接退出');
+    }
+
+    function syncTrayUI() {
+      const selOn = !!trayState.screen_selection_enabled;
+      const clipOn = !!trayState.clipboard_capture_enabled;
+
+      const chipSel = document.getElementById('chipScreenSelection');
+      const miniSel = document.getElementById('miniChipSelection');
+      if (chipSel) {
+        chipSel.classList.toggle('on', selOn);
+        chipSel.innerText = (selOn ? '✓ ' : '') + '划词取词';
+      }
+      if (miniSel) {
+        miniSel.classList.toggle('on', selOn);
+        miniSel.innerText = (selOn ? '✓ ' : '') + '划词';
+      }
+
+      const chipClip = document.getElementById('chipClipboardCapture');
+      const miniClip = document.getElementById('miniChipClipboard');
+      if (chipClip) {
+        chipClip.classList.toggle('on', clipOn);
+        chipClip.innerText = (clipOn ? '✓ ' : '') + '剪贴板取词';
+      }
+      if (miniClip) {
+        miniClip.classList.toggle('on', clipOn);
+        miniClip.innerText = (clipOn ? '✓ ' : '') + '取词';
+      }
+
+      const menuSel = document.getElementById('menuLabelSelection');
+      const menuClip = document.getElementById('menuLabelClipboard');
+      if (menuSel) menuSel.innerText = (selOn ? '✓ ' : '  ') + '屏幕划词翻译 (Screen Capture)';
+      if (menuClip) menuClip.innerText = (clipOn ? '✓ ' : '  ') + '剪贴板自动查词 (Clipboard)';
+
+      const chkSel = document.getElementById('settingScreenSelection');
+      const chkClip = document.getElementById('settingClipboardCapture');
+      const chkClose = document.getElementById('settingCloseToTray');
+      if (chkSel) chkSel.checked = selOn;
+      if (chkClip) chkClip.checked = clipOn;
+      if (chkClose) chkClose.checked = !!trayState.close_to_tray;
+    }
+
+    function explicitQuitApplication() {
+      hideTrayContextMenu();
+      showToast('正在完全退出 AI 词典...');
+      postToNativeShell({ action: 'quitApp' });
+    }
+
+    function switchPage(pageId, btn) {
+      document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active'));
+      const target = document.getElementById('page-' + pageId);
+      if (target) target.classList.add('active');
+
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      if (pageId === 'wordbook') loadWordbook();
+      if (pageId === 'history') loadHistory();
+      if (pageId === 'models') { loadModels(); loadDictStats(); }
+      if (pageId === 'ocr') refreshNativeOcrAndAx();
+    }
+
+    function quickSelectWord(word) {
+      document.getElementById('dictSearchInput').value = word;
+      switchPage('dictionary', document.getElementById('nav-dictionary'));
+      performLookup();
+    }
+
+    async function performLookup() {
+      const q = document.getElementById('dictSearchInput').value.trim();
+      if (!q) return;
+      const res = await fetch('/api/lookup?q=' + encodeURIComponent(q));
+      const data = await res.json();
+      const col = document.getElementById('dictMainColumn');
+
+      if (!data.found) {
+        currentEntry = null;
+        const suggHtml = (data.suggestions || []).map(s =>
+          `<button class="btn" style="height:30px; font-size:12.5px;" onclick="quickSelectWord('${s}')">${s}</button>`
+        ).join(' ');
+        col.innerHTML = `
+          <div class="card">
+            <h3 style="font-size:18px; margin-bottom:8px;">词典中未找到：${data.query}</h3>
+            <p style="font-size:13.5px; color:var(--text-sub); margin-bottom:12px;">
+              您可以尝试以下相近单词，或直接使用本地 AI 翻译该内容：
+            </p>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">${suggHtml}</div>
+            <button class="btn btn-primary" onclick="document.getElementById('transStudioInput').value='${data.query}'; switchPage('translate', document.getElementById('nav-translate')); runStudioTranslation();">
+              使用 AI 翻译「${data.query}」
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      const e = data.entry;
+      currentEntry = e;
+
+      const sensesHtml = e.senses.map(s => `
+        <div class="sense-row">
+          <span class="pos-badge">${s.pos}</span>
+          ${s.domain ? `<span class="tag blue" style="margin-right:6px;">${s.domain}</span>` : ''}
+          <strong style="font-size:15px;">${s.zh}</strong>
+          ${s.en ? `<div style="color:var(--text-sub); font-size:13.5px; margin-top:3px; padding-left:46px;">${s.en}</div>` : ''}
+        </div>
+      `).join('');
+
+      const formsPairs = Object.entries(e.forms || {}).map(([k, v]) =>
+        `<button class="btn" style="height:26px; padding:0 8px; font-size:12px;" onclick="quickSelectWord('${v}')">${k}: ${v}</button>`
+      ).join(' ');
+
+      const examplesHtml = (e.examples || []).map(ex => `
+        <div style="padding:10px 12px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; margin-top:8px; font-size:13.5px;">
+          <div style="font-weight:500;">${ex.en}</div>
+          <div style="color:var(--text-sub); margin-top:3px;">${ex.zh}</div>
+        </div>
+      `).join('');
+
+      col.innerHTML = `
+        <div class="card">
+          <div class="word-title-row">
+            <div>
+              <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <span class="headword">${e.lemma}</span>
+                <span class="tag green">${data.elapsed_ms} ms</span>
+                ${e.matched_via !== 'exact' ? `<span class="tag blue">词形还原: ${e.matched_via}</span>` : ''}
+              </div>
+              <div class="phonetics-row">
+                ${e.ipa_uk ? `<span>英 <code>${e.ipa_uk}</code></span>` : ''}
+                <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="speakWord('${e.lemma}', 'uk')">🔊 英音</button>
+                ${e.ipa_us ? `<span>美 <code>${e.ipa_us}</code></span>` : ''}
+                <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="speakWord('${e.lemma}', 'us')">🔊 美音</button>
+              </div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-primary" onclick="saveCurrentEntry()">⭐ 加入生词本</button>
+              <button class="btn" onclick="navigator.clipboard.writeText('${e.lemma}'); showToast('已复制单词');">复制</button>
+            </div>
+          </div>
+
+          <div>${sensesHtml}</div>
+
+          ${formsPairs ? `<div style="margin-top:14px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;"><span style="font-size:12.5px; color:var(--text-sub);">词形变化:</span>${formsPairs}</div>` : ''}
+
+          ${examplesHtml ? `<div style="margin-top:18px;"><div style="font-size:13px; font-weight:600; color:var(--text-sub); margin-bottom:4px;">常用短语与双语例句</div>${examplesHtml}</div>` : ''}
+        </div>
+      `;
+
+      document.getElementById('pillHeadword').innerText = e.lemma;
+      document.getElementById('pillIpa').innerText = e.ipa_us || '';
+      document.getElementById('pillSensesBox').innerHTML = e.senses.slice(0, 3).map(s =>
+        `<div><span class="pos-badge">${s.pos}</span> ${s.zh}</div>`
+      ).join('');
+    }
+
+    async function speakWord(text, accent) {
+      await fetch('/api/speak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, accent })
+      });
+    }
+
+    async function saveCurrentEntry() {
+      if (!currentEntry) return;
+      const summary = currentEntry.senses.map(s => `${s.pos} ${s.zh}`).join('；');
+      await fetch('/api/wordbook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entry_id: currentEntry.id,
+          source_text: currentEntry.lemma,
+          source_lang: currentEntry.lang,
+          target_lang: 'zh',
+          summary_snapshot: summary,
+          source_id: currentEntry.source_id,
+          note: ''
+        })
+      });
+      showToast(`已将「${currentEntry.lemma}」加入生词本`);
+      loadWordbook();
+    }
+
+    function swapTranslateLangs() {
+      const s = document.getElementById('transSourceLang');
+      const t = document.getElementById('transTargetLang');
+      if (s.value !== 'auto') {
+        const tmp = s.value;
+        s.value = t.value;
+        t.value = tmp;
+      }
+    }
+
+    function parseGlossaryInput() {
+      const raw = (document.getElementById('glossaryInput')?.value || '').trim();
+      const map = {};
+      raw.split(',').forEach(pair => {
+        const [k, v] = pair.split('=').map(s => (s || '').trim());
+        if (k && v) map[k] = v;
+      });
+      return map;
+    }
+
+    async function runStudioTranslation() {
+      const text = document.getElementById('transStudioInput').value;
+      const source_lang = document.getElementById('transSourceLang').value;
+      const target_lang = document.getElementById('transTargetLang').value;
+      const preserve_format = document.getElementById('preserveFormatCheckbox').checked;
+      const glossary = parseGlossaryInput();
+      currentTranslationReqId = 'req-' + Date.now();
+
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          request_id: currentTranslationReqId,
+          text,
+          source_lang,
+          target_lang,
+          preserve_format,
+          glossary
+        })
+      });
+      const data = await res.json();
+      const out = document.getElementById('transStudioOutput');
+      const badge = document.getElementById('transAc10StatusBadge');
+
+      if (data.status === 'model_not_installed') {
+        out.value = data.message;
+        badge.innerHTML = `<span style="color:var(--warning);">未启用翻译模型，请在「6. 设置与词库」中启用模型</span>`;
+        return;
+      }
+      out.value = data.translated_text || '';
+      badge.innerHTML = `翻译完成 · 耗时 ${data.elapsed_ms} ms · 已保留 ${data.protected_tokens_count} 处代码/链接格式`;
+    }
+
+    async function cancelStudioTranslation() {
+      const reqId = currentTranslationReqId || 'manual-cancel';
+      await fetch('/api/translate/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ request_id: reqId })
+      });
+      document.getElementById('transAc10StatusBadge').innerText = '当前翻译已取消';
+      showToast('已取消翻译');
+    }
+
+    function copyStudioOutput() {
+      const val = document.getElementById('transStudioOutput').value;
+      if (val) {
+        navigator.clipboard.writeText(val);
+        showToast('已复制译文');
+      }
+    }
+
+    async function refreshNativeOcrAndAx() {
+      const res = await fetch('/api/native-bridge');
+      const data = await res.json();
+      if (!data.visionOcr) return;
+
+      latestOcrLines = data.visionOcr.lines || [];
+      document.getElementById('ocrRecognizedList').innerHTML = latestOcrLines.map((l, idx) => `
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="tag">第 ${idx + 1} 行</span>
+          <input type="text" value="${l.text}" class="ocr-editable-line" style="flex:1;" />
+        </div>
+      `).join('');
+
+      const sec = data.secureFieldSimulation || {};
+      document.getElementById('ocrAxSecurityCard').innerText =
+        `安全状态：${sec.message} · 系统离线语音包：${data.availableVoicesCount} 个可用`;
+    }
+
+    function sendOcrLinesToTranslator() {
+      const inputs = document.querySelectorAll('.ocr-editable-line');
+      const lines = Array.from(inputs).map(i => i.value).join('\n');
+      document.getElementById('transStudioInput').value = lines;
+      switchPage('translate', document.getElementById('nav-translate'));
+      runStudioTranslation();
+    }
+
+    async function loadWordbook(searchQuery = '') {
+      const url = searchQuery
+        ? '/api/wordbook?q=' + encodeURIComponent(searchQuery)
+        : '/api/wordbook';
+      const res = await fetch(url);
+      const data = await res.json();
+      document.getElementById('sidebarWordCount').innerText = data.items.length;
+      const tbody = document.getElementById('wordbookGridBody');
+      if (!data.items.length) {
+        tbody.innerHTML = `<tr><td colspan="5" style="color:var(--text-sub); padding:20px;">暂无生词，查词后点击「加入生词本」即可收藏。</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.items.map(item => `
+        <tr>
+          <td><a href="javascript:void(0)" style="color:var(--primary); font-weight:700; text-decoration:none;" onclick="quickSelectWord('${item.source_text}')">${item.source_text}</a></td>
+          <td><span class="tag green">Lv.${item.mastery_level || 1}</span></td>
+          <td>${item.summary_snapshot}</td>
+          <td style="cursor:pointer; color:var(--primary);" onclick="editWordNote('${item.source_text}', '${(item.note || '').replace(/'/g, "\\'")}')">${item.note || '+ 添加备注'}</td>
+          <td>
+            <button class="btn" style="height:26px; padding:0 8px; font-size:12px;" onclick="markWordMastered('${item.source_text}')">已掌握</button>
+            <button class="btn btn-danger" style="height:26px; padding:0 8px; font-size:12px;" onclick="deleteWordFromBook('${item.source_text}')">删除</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function markWordMastered(word) {
+      await fetch('/api/wordbook/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source_text: word, rating: 5 })
+      });
+      loadWordbook(document.getElementById('wordbookSearchInput')?.value || '');
+      showToast(`已标记「${word}」为已掌握 (Lv.5)`);
+    }
+
+    async function editWordNote(word, currentNote) {
+      const nextNote = prompt(`修改「${word}」的备注：`, currentNote);
+      if (nextNote === null) return;
+      await fetch('/api/wordbook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_text: word,
+          source_lang: 'en',
+          target_lang: 'zh',
+          summary_snapshot: '',
+          note: nextNote
+        })
+      });
+      loadWordbook(document.getElementById('wordbookSearchInput')?.value || '');
+    }
+
+    async function deleteWordFromBook(word) {
+      await fetch('/api/wordbook/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source_text: word, source_lang: 'en', target_lang: 'zh' })
+      });
+      loadWordbook(document.getElementById('wordbookSearchInput')?.value || '');
+    }
+
+    async function importSampleJsonBatch() {
+      const sampleBatch = [
+        { entry_id: 'en:absorb', source_text: 'absorb', source_lang: 'en', target_lang: 'zh', summary_snapshot: 'v. 吸收（液体、气体等）；理解', source_id: 'public-vocab-bsd3', note: '四级核心词' },
+        { entry_id: 'en:academic', source_text: 'academic', source_lang: 'en', target_lang: 'zh', summary_snapshot: 'adj. 学术的；学院的', source_id: 'public-vocab-bsd3', note: '高频学术词' },
+        { entry_id: 'en:resilience', source_text: 'resilience', source_lang: 'en', target_lang: 'zh', summary_snapshot: 'n. 复原力；系统韧性', source_id: 'wordnet-3.0+ecdict-mit', note: '系统架构核心词' }
+      ];
+      await fetch('/api/wordbook/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entries: sampleBatch })
+      });
+      loadWordbook();
+      showToast('已导入示例生词');
+    }
+
+    async function togglePrivacyMode(enabled) {
+      await fetch('/api/privacy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled })
+      });
+      const menuPriv = document.getElementById('menuLabelPrivacy');
+      if (menuPriv) menuPriv.innerText = (enabled ? '✓ ' : '  ') + '私密无痕查词模式';
+      showToast(enabled ? '私密模式已开启（不保存查询记录）' : '私密模式已关闭');
+      loadHistory();
+    }
+
+    async function loadHistory() {
+      const res = await fetch('/api/history');
+      const data = await res.json();
+      document.getElementById('privacyModeSwitch').checked = data.privacy_mode;
+      const tbody = document.getElementById('historyGridBody');
+      if (!data.items.length) {
+        tbody.innerHTML = `<tr><td colspan="4" style="color:var(--text-sub); padding:20px;">暂无历史记录。</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.items.map(item => `
+        <tr>
+          <td><span class="tag">${item.kind}</span></td>
+          <td style="font-weight:600;">${item.input_text}</td>
+          <td style="color:var(--text-sub);">${item.result_excerpt}</td>
+          <td style="color:var(--text-muted); font-size:12px;">${item.created_at.slice(0, 19).replace('T', ' ')}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function clearAllHistory() {
+      await fetch('/api/history/clear', { method: 'POST' });
+      loadHistory();
+      showToast('历史记录已清空');
+    }
+
+    async function loadDictStats() {
+      const res = await fetch('/api/dict/stats');
+      const data = await res.json();
+      document.getElementById('dictCountBadge').innerText = `${data.total_entries.toLocaleString()} 公开词条已内置`;
+      document.getElementById('dictStatsText').innerText =
+        `当前本地词库共 ${data.total_entries.toLocaleString()} 条真实词条（数据库体积 ${data.db_size_mb} MB，涵盖初中/高中/四六级/考研/托福/SAT/WordNet/CC-CEDICT）。`;
+    }
+
+    async function importQuickCustomWord() {
+      const word = document.getElementById('customDictWordInput').value.trim();
+      const zh = document.getElementById('customDictZhInput').value.trim();
+      if (!word || !zh) {
+        showToast('请填写单词和中文释义');
+        return;
+      }
+      await fetch('/api/dict/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entries: [{ word, zh, pos: 'n./v.' }] })
+      });
+      document.getElementById('customDictWordInput').value = '';
+      document.getElementById('customDictZhInput').value = '';
+      await loadDictStats();
+      showToast(`已将「${word}」导入默认词典库！`);
+      quickSelectWord(word);
+    }
+
+    async function loadModels() {
+      const res = await fetch('/api/models');
+      const data = await res.json();
+      const box = document.getElementById('modelsListContainer');
+      const activeReady = data.models.find(m => m.is_active && m.status === 'ready');
+      document.getElementById('sidebarModelTag').innerText = activeReady ? activeReady.quant : '仅词典';
+
+      box.innerHTML = data.models.map(m => {
+        const sizeGb = (m.size_bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+        const isReady = m.status === 'ready';
+        return `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px;">
+            <div>
+              <strong>${m.model_name} (${m.quant})</strong>
+              ${m.is_active ? '<span class="tag green" style="margin-left:6px;">当前启用</span>' : ''}
+              <div style="font-size:12px; color:var(--text-sub); margin-top:2px;">文件大小: ${sizeGb} · 推荐内存: ${m.recommended_ram_gb} GB</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              ${!isReady
+                ? `<button class="btn btn-primary" onclick="updateModel('${m.id}', 'install_and_verify')">启用模型</button>`
+                : `<button class="btn" onclick="updateModel('${m.id}', 'activate')">设为默认</button>
+                   <button class="btn btn-danger" onclick="updateModel('${m.id}', 'uninstall')">卸载</button>`
+              }
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function updateModel(modelId, action) {
+      await fetch('/api/models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model_id: modelId, action })
+      });
+      loadModels();
+      showToast('模型状态已更新');
+    }
+
+    async function loadSystemSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        const data = await res.json();
+        const s = data.settings || {};
+        if (typeof s.close_to_tray === 'boolean') trayState.close_to_tray = s.close_to_tray;
+        if (typeof s.screen_selection_enabled === 'boolean') trayState.screen_selection_enabled = s.screen_selection_enabled;
+        if (typeof s.clipboard_capture_enabled === 'boolean') trayState.clipboard_capture_enabled = s.clipboard_capture_enabled;
+        syncTrayUI();
+      } catch (e) {}
+    }
+
+    async function saveSystemSettings() {
+      const payload = {
+        hotkey_lookup_mac: document.getElementById('hotkeyLookupInput').value,
+        hotkey_ocr_mac: document.getElementById('hotkeyOcrInput').value,
+        close_to_tray: document.getElementById('settingCloseToTray').checked,
+        tray_click_action: document.getElementById('settingTrayClickAction').value
+      };
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.status === 'error') {
+        showToast(data.message);
+        return;
+      }
+      showToast('设置已保存');
+    }
+
+    function toggleQuickPillOverlay() {
+      document.getElementById('quickPillOverlay').classList.toggle('show');
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.getElementById('quickPillOverlay').classList.remove('show');
+        closeYoudaoMiniPopover();
+        hideTrayContextMenu();
+      }
+    });
+
+    // Startup initialization
+    performLookup();
+    runTrayMiniQuery();
+    loadModels();
+    loadWordbook();
+    loadDictStats();
+    loadSystemSettings();
+  </script>
+</body>
+</html>

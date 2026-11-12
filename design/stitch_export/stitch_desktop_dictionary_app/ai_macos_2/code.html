@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"on-tertiary-fixed-variant":"#004e5a","on-primary-fixed-variant":"#004493","primary-fixed":"#d8e2ff","surface-container-lowest":"#0e0e10","inverse-on-surface":"#303032","error":"#ffb4ab","surface-tint":"#adc6ff","on-error-container":"#ffdad6","on-primary-fixed":"#001a41","on-tertiary-fixed":"#001f25","primary-container":"#4b8eff","tertiary-fixed":"#a5eeff","tertiary-container":"#059fb5","primary":"#adc6ff","on-secondary-fixed":"#0c006a","on-error":"#690005","surface-dim":"#131315","surface-container-high":"#2a2a2c","outline-variant":"#414755","surface-variant":"#353437","on-surface":"#e4e2e4","on-secondary-container":"#b2b1ff","on-secondary-fixed-variant":"#3631b4","on-tertiary-container":"#002f37","background":"#131315","on-secondary":"#1c0b9f","surface-container-highest":"#353437","outline":"#8b90a0","tertiary":"#61d6ee","on-background":"#e4e2e4","on-primary-container":"#00285c","surface-bright":"#39393b","inverse-primary":"#005bc1","secondary":"#c2c1ff","on-tertiary":"#00363f","secondary-fixed":"#e2dfff","secondary-container":"#3834b6","surface-container-low":"#1b1b1d","inverse-surface":"#e4e2e4","surface-container":"#1f1f21","tertiary-fixed-dim":"#61d6ee","surface":"#131315","on-primary":"#002e69","primary-fixed-dim":"#adc6ff","error-container":"#93000a","on-surface-variant":"#c1c6d7","secondary-fixed-dim":"#c2c1ff"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"space-lg":"1.25rem","margin-window":"0.75rem","margin":"1.25rem","space-xs":"0.25rem","space-sm":"0.5rem","gutter-sidebar":"0.75rem","space-xl":"2rem","space-md":"0.75rem","gutter":"1rem"},"fontFamily":{"body-lg":["Inter"],"label-phonetic":["Inter"],"label-code":["JetBrains Mono"],"body-sm":["Inter"],"headline-sm":["Inter"],"display-term":["Inter"],"headline-lg":["Inter"],"headline-md":["Inter"],"body-md":["Inter"]},"fontSize":{"body-lg":["15px",{"lineHeight":"22px","letterSpacing":"-0.005em","fontWeight":"400"}],"label-phonetic":["14px",{"lineHeight":"18px","letterSpacing":"0.02em","fontWeight":"400"}],"label-code":["11px",{"lineHeight":"14px","letterSpacing":"0em","fontWeight":"500"}],"body-sm":["11px",{"lineHeight":"15px","letterSpacing":"0.01em","fontWeight":"400"}],"headline-sm":["15px",{"lineHeight":"20px","letterSpacing":"-0.01em","fontWeight":"600"}],"display-term":["40px",{"lineHeight":"48px","letterSpacing":"-0.03em","fontWeight":"700"}],"headline-lg":["28px",{"lineHeight":"34px","letterSpacing":"-0.02em","fontWeight":"600"}],"headline-md":["20px",{"lineHeight":"26px","letterSpacing":"-0.015em","fontWeight":"600"}],"body-md":["13px",{"lineHeight":"19px","letterSpacing":"0em","fontWeight":"400"}]}}}}</script></head><body class="bg-background font-body-md text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-container"><aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-low/85 backdrop-blur-2xl z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col"><div class="h-14 flex items-center px-4 gap-2"><div class="w-3 h-3 rounded-full bg-[#FF5F56] shadow-sm"></div><div class="w-3 h-3 rounded-full bg-[#FFBD2E] shadow-sm"></div><div class="w-3 h-3 rounded-full bg-[#27C93F] shadow-sm"></div></div><div class="px-3 pb-2"><span class="px-2 font-body-sm text-body-sm text-outline tracking-wider uppercase font-semibold">功能模块</span><nav class="mt-1 flex flex-col gap-0.5" data-active-classes="bg-surface-container-high text-primary font-medium"><a aria-current="page" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg transition-all bg-surface-container-high text-primary font-medium" data-path="dictionary" href="#"><span class="material-symbols-outlined text-[18px]">menu_book</span><span class="font-body-md text-body-md">查词</span></a><a class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all" data-path="translate" href="#"><span class="material-symbols-outlined text-[18px]">translate</span><span class="font-body-md text-body-md">AI 翻译</span></a><a class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all" data-path="ocr" href="#"><span class="material-symbols-outlined text-[18px]">crop_free</span><span class="font-body-md text-body-md">截图 OCR</span></a></nav></div><div class="px-3 py-2"><span class="px-2 font-body-sm text-body-sm text-outline tracking-wider uppercase font-semibold">词库与学习</span><nav class="mt-1 flex flex-col gap-0.5" data-active-classes="bg-surface-container-high text-primary font-medium"><a class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all" data-path="wordbook" href="#"><span class="material-symbols-outlined text-[18px]">bookmark</span><span class="font-body-md text-body-md">生词本</span></a><a class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all" data-path="history" href="#"><span class="material-symbols-outlined text-[18px]">history</span><span class="font-body-md text-body-md">历史记录</span></a></nav></div><div class="px-3 py-2"><span class="px-2 font-body-sm text-body-sm text-outline tracking-wider uppercase font-semibold">系统管理</span><nav class="mt-1 flex flex-col gap-0.5" data-active-classes="bg-surface-container-high text-primary font-medium"><a class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all" data-path="models-and-settings" href="#"><span class="material-symbols-outlined text-[18px]">tune</span><span class="font-body-md text-body-md">模型与设置</span></a></nav></div></div><div class="p-3 m-3 rounded-xl bg-surface-container-lowest/70 backdrop-blur-md shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex items-center gap-2"><span class="material-symbols-outlined text-tertiary text-[18px]">memory</span><div class="flex flex-col min-w-0"><span class="font-body-sm text-body-sm text-on-surface font-semibold truncate">M3 Max · Metal 3</span><span class="font-label-code text-label-code text-tertiary truncate">活跃中 · 0 网络回传</span></div></div><div class="mt-2 pt-2 flex items-center justify-between font-label-code text-label-code text-on-surface-variant"><span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>离线沙盒</span><span>0ms 延迟</span></div></div></aside><div class="pl-64"><header class="fixed top-0 left-64 right-0 h-14 bg-surface-container/70 backdrop-blur-2xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-6"><div class="flex items-center gap-3"><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight">AI Dictionary</span><span class="font-body-sm text-body-sm text-on-surface-variant">Hy-MT2 离线引擎 · Apple Silicon 优化</span></div></div><div class="flex items-center gap-3"><div class="relative flex items-center"><span class="material-symbols-outlined absolute left-2.5 text-outline text-[16px]">search</span><input class="h-8 pl-8 pr-12 rounded-full bg-surface-container-lowest/80 text-on-surface placeholder:text-outline font-body-sm text-body-sm outline-none cursor-pointer focus:ring-1 focus:ring-primary/40 transition-all w-60" placeholder="快速查词或语义搜索 (⌘K)" readonly="" type="text"/><div class="absolute right-2 px-1.5 py-0.5 rounded bg-surface-variant text-on-surface-variant font-label-code text-label-code">⌘K</div></div><div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-lowest/60 text-tertiary font-label-code text-label-code shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span><span>Metal 3 加速 · 0ms 延迟</span></div><a class="w-8 h-8 rounded-lg bg-surface-container-high/60 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface transition-all" data-path="models-and-settings" href="#"><span class="material-symbols-outlined text-[18px]">settings</span></a><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="w-full pt-14 px-8 min-h-screen bg-surface"><div class="flex flex-col w-full pb-16">
+<!-- Top Command & Morphology Bar -->
+<section class="flex flex-col gap-3 mb-6">
+<div class="flex flex-wrap items-center justify-between gap-3 bg-surface-container-low/70 backdrop-blur-xl p-2.5 rounded-xl shadow-sm">
+<!-- Active Search Pill -->
+<div class="flex items-center gap-2 flex-1 min-w-[320px] max-w-xl bg-surface-container-lowest/90 px-3.5 py-1.5 rounded-full shadow-inner">
+<span class="material-symbols-outlined text-outline text-[18px]">search</span>
+<input class="bg-transparent text-on-surface font-body-lg text-body-lg outline-none w-full select-all font-medium" type="text" value="resilience"/>
+<div class="flex items-center gap-1">
+<span class="px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-code text-label-code">⌘F</span>
+<button class="w-5 h-5 rounded-full flex items-center justify-center text-outline hover:text-on-surface hover:bg-surface-container transition-all">
+<span class="material-symbols-outlined text-[14px]">cancel</span>
+</button>
+</div>
+</div>
+<!-- Segmented Lexicon Source Switcher -->
+<div class="flex items-center p-1 bg-surface-container-lowest/80 rounded-lg gap-0.5 shadow-sm">
+<button class="px-3 py-1 rounded-md text-on-primary bg-primary-container font-body-sm text-body-sm shadow-sm transition-all flex items-center gap-1.5" id="src-oxford" onclick="switchSource('oxford')">
+<span class="material-symbols-outlined text-[14px]">verified</span>
+<span>Oxford Curated</span>
+</button>
+<button class="px-3 py-1 rounded-md text-on-surface-variant hover:text-on-surface font-body-sm text-body-sm transition-all flex items-center gap-1.5" id="src-wordnet" onclick="switchSource('wordnet')">
+<span class="material-symbols-outlined text-[14px]">account_tree</span>
+<span>WordNet 3.0</span>
+</button>
+<button class="px-3 py-1 rounded-md text-on-surface-variant hover:text-on-surface font-body-sm text-body-sm transition-all flex items-center gap-1.5" id="src-neural" onclick="switchSource('neural')">
+<span class="material-symbols-outlined text-[14px] text-tertiary">bolt</span>
+<span>Hy-MT2 深度解析</span>
+</button>
+</div>
+</div>
+<!-- Morphology & Query Expansion Suggestions -->
+<div class="flex items-center gap-2 px-1 overflow-x-auto">
+<span class="flex items-center gap-1 font-label-code text-label-code text-outline uppercase tracking-wider shrink-0">
+<span class="material-symbols-outlined text-[14px]">alt_route</span>
+        原形溯源及形态:
+      </span>
+<div class="flex items-center gap-2">
+<a class="px-2.5 py-1 rounded-md bg-surface-container text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-all font-label-code text-label-code flex items-center gap-1.5" href="#">
+<span class="text-outline">resiliently</span>
+<span class="text-tertiary">→</span>
+<span class="text-on-surface font-semibold">resilience</span>
+</a>
+<a class="px-2.5 py-1 rounded-md bg-surface-container text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-all font-label-code text-label-code flex items-center gap-1.5" href="#">
+<span class="text-outline">resilient</span>
+<span class="text-tertiary">→</span>
+<span class="text-on-surface font-semibold">adj.</span>
+</a>
+<a class="px-2.5 py-1 rounded-md bg-surface-container text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-all font-label-code text-label-code flex items-center gap-1.5" href="#">
+<span class="text-outline">running</span>
+<span class="text-tertiary">→</span>
+<span class="text-on-surface font-semibold">run</span>
+</a>
+<a class="px-2.5 py-1 rounded-md bg-surface-container text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-all font-label-code text-label-code flex items-center gap-1.5" href="#">
+<span class="text-outline">abandoned</span>
+<span class="text-tertiary">→</span>
+<span class="text-on-surface font-semibold">abandon</span>
+</a>
+</div>
+</div>
+</section>
+<!-- 2-Column Split Workspace (Central Canvas + Right macOS Inspector) -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+<!-- LEFT MAIN COLUMN: Word Canvas (8 Cols) -->
+<div class="xl:col-span-8 flex flex-col gap-6">
+<!-- Word Header & Phonetics Card -->
+<div class="bg-surface-container-low/90 backdrop-blur-2xl rounded-2xl p-6 shadow-md relative overflow-hidden">
+<!-- Ambient subtle glow behind headword -->
+<div class="absolute -top-16 -right-16 w-52 h-52 rounded-full bg-primary/10 blur-3xl pointer-events-none"></div>
+<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 relative z-10">
+<div>
+<div class="flex items-center gap-3">
+<h1 class="font-display-term text-display-term text-on-surface tracking-tight font-bold">resilience</h1>
+<!-- Level & Frequency Badges -->
+<span class="px-2.5 py-0.5 rounded-full bg-primary-container text-on-primary-container font-label-code text-label-code font-bold shadow-sm">
+                CEFR C1
+              </span>
+<span class="px-2.5 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-code text-label-code">
+                COCA Top 3000
+              </span>
+<span class="px-2.5 py-0.5 rounded-full bg-surface-container-highest text-tertiary font-label-code text-label-code">
+                学术词汇 AWL
+              </span>
+</div>
+<!-- Phonetics bar with Apple-style micro speakers -->
+<div class="flex flex-wrap items-center gap-4 mt-3">
+<!-- UK IPA -->
+<div class="flex items-center gap-2 bg-surface-container-lowest/80 px-2.5 py-1 rounded-lg">
+<span class="font-label-code text-label-code text-outline font-semibold">UK</span>
+<span class="font-label-phonetic text-label-phonetic text-on-surface">/rɪˈzɪl.jəns/</span>
+<button class="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center text-primary hover:bg-primary hover:text-on-primary active:scale-95 transition-all shadow-sm" onclick="playAudio('uk')" title="朗读英音">
+<span class="material-symbols-outlined text-[14px]">volume_up</span>
+</button>
+</div>
+<!-- US IPA -->
+<div class="flex items-center gap-2 bg-surface-container-lowest/80 px-2.5 py-1 rounded-lg">
+<span class="font-label-code text-label-code text-outline font-semibold">US</span>
+<span class="font-label-phonetic text-label-phonetic text-on-surface">/rɪˈzɪl.jəns/</span>
+<button class="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center text-primary hover:bg-primary hover:text-on-primary active:scale-95 transition-all shadow-sm" onclick="playAudio('us')" title="朗读美音">
+<span class="material-symbols-outlined text-[14px]">volume_up</span>
+</button>
+</div>
+<span class="text-outline text-body-sm">·</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">可数 / 不可数名词 [U, C]</span>
+</div>
+</div>
+<!-- Quick Action Buttons -->
+<div class="flex items-center gap-1.5 shrink-0 self-start">
+<button class="h-8 px-3 rounded-lg bg-surface-container-high/90 hover:bg-surface-container-highest text-on-surface flex items-center gap-1.5 font-body-sm text-body-sm transition-all active:scale-95 shadow-sm" id="btn-star" onclick="toggleStar()">
+<span class="material-symbols-outlined text-outline text-[18px]" id="star-icon">star</span>
+<span id="star-text">收藏到生词本</span>
+</button>
+<button class="w-8 h-8 rounded-lg bg-surface-container-high/90 hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-all active:scale-95 shadow-sm" onclick="copyEntry()" title="拷贝释义">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+<button class="w-8 h-8 rounded-lg bg-surface-container-high/90 hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-all active:scale-95 shadow-sm" title="共享与导出">
+<span class="material-symbols-outlined text-[16px]">ios_share</span>
+</button>
+</div>
+</div>
+<!-- Morphological Inflection Families Bar -->
+<div class="mt-5 pt-4 bg-surface-container-lowest/60 rounded-xl p-3 grid grid-cols-2 md:grid-cols-4 gap-3">
+<div class="flex flex-col">
+<span class="font-label-code text-label-code text-outline uppercase">Noun (名词)</span>
+<span class="font-body-md text-body-md text-on-surface font-semibold">resilience, resiliency</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-code text-label-code text-outline uppercase">Adjective (形容词)</span>
+<a class="font-body-md text-body-md text-primary hover:underline font-semibold" href="#">resilient</a>
+</div>
+<div class="flex flex-col">
+<span class="font-label-code text-label-code text-outline uppercase">Adverb (副词)</span>
+<span class="font-body-md text-body-md text-on-surface font-semibold">resiliently</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-code text-label-code text-outline uppercase">Verb 关联动词</span>
+<span class="font-body-md text-body-md text-on-surface-variant font-semibold">resile (罕用/法学)</span>
+</div>
+</div>
+</div>
+<!-- Structured Senses (Numbered 1, 2, 3) -->
+<div class="flex flex-col gap-4">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">权威释义与语境例句</h2>
+</div>
+<span class="font-label-code text-label-code text-outline">Oxford English Dictionary 12th Ed.</span>
+</div>
+<!-- Sense 1: Psychological & Workplace -->
+<div class="bg-surface-container-low/90 backdrop-blur-xl rounded-2xl p-5 shadow-sm flex flex-col gap-3.5 hover:bg-surface-container-low transition-all">
+<div class="flex items-center gap-2.5">
+<span class="w-6 h-6 rounded-full bg-primary text-on-primary font-headline-sm text-headline-sm flex items-center justify-center shrink-0">1</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-secondary font-label-code text-label-code font-semibold">[心理学 / 职场认知]</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">复原力，心理韧性，适应力</span>
+</div>
+<p class="font-body-lg text-body-lg text-on-surface pl-8">
+            The capacity to withstand or recover quickly from difficulties, tough conditions, or emotional shock; mental toughness.
+          </p>
+<div class="pl-8 flex flex-col gap-2.5">
+<div class="p-3 rounded-xl bg-surface-container-lowest/80 flex flex-col gap-1">
+<div class="font-body-md text-body-md text-on-surface">
+                "Courage isn't having the strength to go on – it is going on when you don't have strength; that is genuine <mark class="bg-primary/25 text-primary font-semibold px-1 rounded">resilience</mark>."
+              </div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">“勇气并非是有力量坚持下去，而是在毫无力量时依然前行；这正是真正的心理韧性。”</span>
+</div>
+<div class="p-3 rounded-xl bg-surface-container-lowest/80 flex flex-col gap-1">
+<div class="font-body-md text-body-md text-on-surface">
+                "The pandemic tested the mental and operational <mark class="bg-primary/25 text-primary font-semibold px-1 rounded">resilience</mark> of modern healthcare teams."
+              </div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">“疫情深度检验了现代医疗团队的心理承压韧性与实战应变能力。”</span>
+</div>
+</div>
+</div>
+<!-- Sense 2: Physics / Materials / Engineering -->
+<div class="bg-surface-container-low/90 backdrop-blur-xl rounded-2xl p-5 shadow-sm flex flex-col gap-3.5 hover:bg-surface-container-low transition-all">
+<div class="flex items-center gap-2.5">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface font-headline-sm text-headline-sm flex items-center justify-center shrink-0">2</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-tertiary font-label-code text-label-code font-semibold">[物理学 / 材料工程]</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">弹力，回弹性，弹性形变模量</span>
+</div>
+<p class="font-body-lg text-body-lg text-on-surface pl-8">
+            The ability of a substance or material to spring back into shape after elastic deformation, compression, or impact.
+          </p>
+<div class="pl-8 flex flex-col gap-2.5">
+<div class="p-3 rounded-xl bg-surface-container-lowest/80 flex flex-col gap-1">
+<div class="font-body-md text-body-md text-on-surface">
+                "Nylon is widely preferred in mountaineering gear because of its supreme tensile strength and high mechanical <mark class="bg-primary/25 text-primary font-semibold px-1 rounded">resilience</mark>."
+              </div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">“由于尼龙具备卓越的抗拉强度和出色的机械回弹性，在登山装备中被极为广泛地采用。”</span>
+</div>
+</div>
+</div>
+<!-- Sense 3: Ecology & Systems Architecture -->
+<div class="bg-surface-container-low/90 backdrop-blur-xl rounded-2xl p-5 shadow-sm flex flex-col gap-3.5 hover:bg-surface-container-low transition-all">
+<div class="flex items-center gap-2.5">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface font-headline-sm text-headline-sm flex items-center justify-center shrink-0">3</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-secondary-fixed-dim font-label-code text-label-code font-semibold">[生态 / 分布式系统]</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">系统自愈能力，容灾抗扰性</span>
+</div>
+<p class="font-body-lg text-body-lg text-on-surface pl-8">
+            The capability of a strained ecosystem or complex computing topology to absorb perturbation and reorganize while undergoing stress.
+          </p>
+<div class="pl-8 flex flex-col gap-2.5">
+<div class="p-3 rounded-xl bg-surface-container-lowest/80 flex flex-col gap-1">
+<div class="font-body-md text-body-md text-on-surface">
+                "The cloud infrastructure demonstrates high failover <mark class="bg-primary/25 text-primary font-semibold px-1 rounded">resilience</mark> through distributed multi-region consensus nodes."
+              </div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">“该云架构通过分布式多地域共识节点展现出极高的故障自愈容灾能力。”</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Rich Visual Card: Etymology & Semantic Evolution -->
+<div class="bg-surface-container-low/90 backdrop-blur-2xl rounded-2xl p-5 shadow-sm">
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">history_edu</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">词源演化树 (Etymology Tree)</span>
+</div>
+<span class="font-label-code text-label-code text-outline">17世纪中叶拉丁源流</span>
+</div>
+<div class="p-4 rounded-xl bg-surface-container-lowest/80 flex flex-col md:flex-row items-center justify-between gap-4">
+<div class="flex flex-col items-center md:items-start text-center md:text-left">
+<span class="font-label-code text-label-code text-tertiary">拉丁语 (Latin)</span>
+<span class="font-headline-sm text-headline-sm text-on-surface mt-0.5">resilire</span>
+<span class="font-body-sm text-body-sm text-outline">re- (向后/再度) + salire (跳跃)</span>
+</div>
+<span class="material-symbols-outlined text-outline text-[20px] hidden md:block">arrow_forward</span>
+<div class="flex flex-col items-center md:items-start text-center md:text-left">
+<span class="font-label-code text-label-code text-secondary">法语过渡 (Middle French)</span>
+<span class="font-headline-sm text-headline-sm text-on-surface mt-0.5">résilience</span>
+<span class="font-body-sm text-body-sm text-outline">物体受冲回弹之特性</span>
+</div>
+<span class="material-symbols-outlined text-outline text-[20px] hidden md:block">arrow_forward</span>
+<div class="flex flex-col items-center md:items-start text-center md:text-left">
+<span class="font-label-code text-label-code text-primary">现代英语 (Modern English)</span>
+<span class="font-headline-sm text-headline-sm text-primary font-bold mt-0.5">resilience</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">兼备“物理形变回弹”与“心智抗挫逆商”</span>
+</div>
+</div>
+</div>
+</div>
+<!-- RIGHT INSPECTOR COLUMN: Hy-MT2 AI Nuance & Telemetry (4 Cols) -->
+<div class="xl:col-span-4 flex flex-col gap-6">
+<!-- Hy-MT2 Local Neural Analysis Card -->
+<div class="bg-surface-container-low/90 backdrop-blur-2xl rounded-2xl p-5 shadow-md flex flex-col gap-4">
+<!-- Neural Card Header -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-lg bg-tertiary/15 flex items-center justify-center text-tertiary shadow-sm">
+<span class="material-symbols-outlined text-[18px]">psychology</span>
+</div>
+<div>
+<div class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-1.5">
+                Hy-MT2 语义精析
+              </div>
+<div class="font-label-code text-label-code text-outline">端侧 7B 密集型嵌入对比</div>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-highest text-tertiary font-label-code text-label-code">0 泄露</span>
+</div>
+<!-- Semantic Nuance Comparison Pill Matrix -->
+<div class="flex flex-col gap-2.5">
+<span class="font-label-code text-label-code text-outline uppercase tracking-wider">近义词辨析 (Semantic Nuance)</span>
+<!-- Term 1: Resilience -->
+<div class="p-3 rounded-xl bg-surface-container-lowest/90 flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-body-md text-body-md text-primary font-bold">Resilience</span>
+<span class="font-label-code text-label-code text-tertiary">98% 拟合</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">强调受创或承压后<b>主动恢复原有常态与心力</b>的能力，兼具弹跳感与长期适应力。</p>
+</div>
+<!-- Term 2: Elasticity -->
+<div class="p-3 rounded-xl bg-surface-container-lowest/90 flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-body-md text-body-md text-on-surface font-semibold">Elasticity</span>
+<span class="font-label-code text-label-code text-outline">物理形变</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">偏纯物理/经济学：受外力拉伸或形变时的<b>即时可逆收缩性</b>，无心智精神引申。</p>
+</div>
+<!-- Term 3: Toughness -->
+<div class="p-3 rounded-xl bg-surface-container-lowest/90 flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<span class="font-body-md text-body-md text-on-surface font-semibold">Toughness</span>
+<span class="font-label-code text-label-code text-outline">耐磨抗断</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">侧重于<b>硬抗磨损打击而不破裂断裂</b>的坚固刚度，不必然包含受创后的“回弹跃升”。</p>
+</div>
+</div>
+<!-- Local Latency & Security Seal -->
+<div class="p-3 rounded-xl bg-surface-container-lowest/70 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+<span class="font-label-code text-label-code text-on-surface">Metal 3 加速推理 36ms</span>
+</div>
+<span class="font-label-code text-label-code text-tertiary">零数据回传</span>
+</div>
+</div>
+<!-- Domain Mastery Radar & Frequency Breakdown -->
+<div class="bg-surface-container-low/90 backdrop-blur-2xl rounded-2xl p-5 shadow-sm flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-headline-sm text-on-surface">语域分布雷达 (Domain Vector)</span>
+<span class="material-symbols-outlined text-outline text-[18px]">radar</span>
+</div>
+<!-- Inline SVG Radar Visualization -->
+<div class="flex flex-col items-center justify-center p-2">
+<svg class="w-48 h-48 text-outline-variant" viewbox="0 0 100 100">
+<!-- Background Polygons -->
+<polygon fill="none" opacity="0.3" points="50,10 88,38 73,82 27,82 12,38" stroke="currentColor" stroke-dasharray="2,2" stroke-width="0.5"></polygon>
+<polygon fill="none" opacity="0.3" points="50,25 76,44 66,74 34,74 24,44" stroke="currentColor" stroke-dasharray="2,2" stroke-width="0.5"></polygon>
+<!-- Center Radial Axes -->
+<line opacity="0.25" stroke="currentColor" stroke-width="0.5" x1="50" x2="50" y1="50" y2="10"></line>
+<line opacity="0.25" stroke="currentColor" stroke-width="0.5" x1="50" x2="88" y1="50" y2="38"></line>
+<line opacity="0.25" stroke="currentColor" stroke-width="0.5" x1="50" x2="73" y1="50" y2="82"></line>
+<line opacity="0.25" stroke="currentColor" stroke-width="0.5" x1="50" x2="27" y1="50" y2="82"></line>
+<line opacity="0.25" stroke="currentColor" stroke-width="0.5" x1="50" x2="12" y1="50" y2="38"></line>
+<!-- Value Area (Psychology, Engineering, Ecology, Tech, Literature) -->
+<polygon class="text-primary fill-primary/20 stroke-primary" points="50,15 82,42 68,76 30,70 18,48" stroke-width="1.8"></polygon>
+<!-- Anchor Data Points -->
+<circle class="fill-tertiary" cx="50" cy="15" r="2.5"></circle>
+<circle class="fill-tertiary" cx="82" cy="42" r="2.5"></circle>
+<circle class="fill-tertiary" cx="68" cy="76" r="2.5"></circle>
+<circle class="fill-tertiary" cx="30" cy="70" r="2.5"></circle>
+<circle class="fill-tertiary" cx="18" cy="48" r="2.5"></circle>
+<!-- Labels on Canvas -->
+<text class="fill-on-surface-variant font-label-code" font-size="5" text-anchor="middle" x="50" y="7">心理学 92%</text>
+<text class="fill-on-surface-variant font-label-code" font-size="5" text-anchor="start" x="92" y="40">工程材料 80%</text>
+<text class="fill-on-surface-variant font-label-code" font-size="5" text-anchor="middle" x="76" y="90">分布式计算 75%</text>
+<text class="fill-on-surface-variant font-label-code" font-size="5" text-anchor="middle" x="24" y="90">生态学 68%</text>
+<text class="fill-on-surface-variant font-label-code" font-size="5" text-anchor="end" x="8" y="40">文学表达 60%</text>
+</svg>
+</div>
+<!-- Mastery progress -->
+<div class="bg-surface-container-lowest/80 p-3 rounded-xl flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<span class="font-body-sm text-body-sm text-on-surface font-medium">当前单词掌握度</span>
+<span class="font-label-code text-label-code text-primary font-bold">Level 4 · 熟记</span>
+</div>
+<div class="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full transition-all duration-700" style="width: 78%;"></div>
+</div>
+</div>
+</div>
+<!-- Industry Collocations & Fixed Phrases -->
+<div class="bg-surface-container-low/90 backdrop-blur-2xl rounded-2xl p-5 shadow-sm flex flex-col gap-3.5">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-headline-sm text-on-surface">行业高频搭配 (Collocations)</span>
+<span class="font-label-code text-label-code text-outline">BNC/COCA</span>
+</div>
+<div class="flex flex-col gap-2">
+<div class="p-2.5 rounded-lg bg-surface-container-lowest/80 flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-semibold">emotional resilience</span>
+<span class="font-body-sm text-body-sm text-outline">情绪复原力，逆商</span>
+</div>
+<span class="font-label-code text-label-code text-tertiary">心理健康</span>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-lowest/80 flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-semibold">systemic resilience</span>
+<span class="font-body-sm text-body-sm text-outline">系统韧性，整体容灾力</span>
+</div>
+<span class="font-label-code text-label-code text-secondary">金融/IT</span>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-lowest/80 flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-semibold">build / foster resilience</span>
+<span class="font-body-sm text-body-sm text-outline">构建/培育韧性</span>
+</div>
+<span class="font-label-code text-label-code text-outline">动词搭配</span>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-lowest/80 flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-semibold">supply chain resilience</span>
+<span class="font-body-sm text-body-sm text-outline">供应链弹性保障机制</span>
+</div>
+<span class="font-label-code text-label-code text-primary">商业管理</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Toast Notification for Copy/Star -->
+<div class="fixed bottom-6 right-8 bg-surface-bright/95 text-on-surface px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 transform translate-y-12 opacity-0 transition-all pointer-events-none z-50" id="action-toast">
+<span class="material-symbols-outlined text-primary text-[18px]">check_circle</span>
+<span class="font-body-md text-body-md" id="toast-message">已复制释义到剪贴板</span>
+</div>
+</div>
+<script>
+  let isStarred = false;
+
+  function toggleStar() {
+    isStarred = !isStarred;
+    const icon = document.getElementById('star-icon');
+    const text = document.getElementById('star-text');
+    const btn = document.getElementById('btn-star');
+
+    if (isStarred) {
+      icon.style.fontVariationSettings = "'FILL' 1";
+      icon.className = "material-symbols-outlined text-primary text-[18px]";
+      text.innerText = "已收录生词本";
+      showToast("已成功收录至本地生词本 (Metal 加速同步)");
+    } else {
+      icon.style.fontVariationSettings = "'FILL' 0";
+      icon.className = "material-symbols-outlined text-outline text-[18px]";
+      text.innerText = "收藏到生词本";
+      showToast("已从生词本中移除");
+    }
+  }
+
+  function copyEntry() {
+    const textToCopy = `resilience [C1, COCA Top 3000]\nUK/US: /rɪˈzɪl.jəns/\n1. [心理学/职场] 复原力，心理韧性。\n2. [物理学/工程] 弹力，回弹性。\n3. [系统架构] 系统自愈容灾能力。`;
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      showToast("词条卡片已格式化并复制到剪贴板");
+    }).catch(() => {
+      showToast("词条卡片已准备就绪");
+    });
+  }
+
+  function playAudio(accent) {
+    showToast(`正在通过本地 CoreAudio 播放 ${accent.toUpperCase()} 发音音频...`);
+  }
+
+  function switchSource(src) {
+    const buttons = {
+      oxford: document.getElementById('src-oxford'),
+      wordnet: document.getElementById('src-wordnet'),
+      neural: document.getElementById('src-neural')
+    };
+
+    Object.keys(buttons).forEach(k => {
+      if (k === src) {
+        buttons[k].className = "px-3 py-1 rounded-md text-on-primary bg-primary-container font-body-sm text-body-sm shadow-sm transition-all flex items-center gap-1.5";
+      } else {
+        buttons[k].className = "px-3 py-1 rounded-md text-on-surface-variant hover:text-on-surface font-body-sm text-body-sm transition-all flex items-center gap-1.5";
+      }
+    });
+
+    const labels = {
+      oxford: "已切换至 Oxford Curated 释义源",
+      wordnet: "已切换至 WordNet 3.0 拓扑语义树",
+      neural: "已激活 Hy-MT2 离线神经深度精析"
+    };
+    showToast(labels[src]);
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById('action-toast');
+    const toastMsg = document.getElementById('toast-message');
+    toastMsg.innerText = msg;
+    toast.classList.remove('translate-y-12', 'opacity-0');
+    toast.classList.add('translate-y-0', 'opacity-100');
+
+    setTimeout(() => {
+      toast.classList.remove('translate-y-0', 'opacity-100');
+      toast.classList.add('translate-y-12', 'opacity-0');
+    }, 2400);
+  }
+</script></main></div></body></html>
