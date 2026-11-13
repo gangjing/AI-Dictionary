@@ -716,18 +716,33 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
     func recognize(image: CGImage) {
         DispatchQueue.global(qos: .userInitiated).async {
             let started = CFAbsoluteTimeGetCurrent()
-            let request = VNRecognizeTextRequest()
-            request.recognitionLevel = .accurate
-            request.recognitionLanguages = ["zh-Hans", "en-US"]
-            request.usesLanguageCorrection = true
-            let handler = VNImageRequestHandler(cgImage: image, options: [:])
-            do {
-                try handler.perform([request])
-            } catch {
-                DispatchQueue.main.async { self.deliverOcrFailure("OCR 失败：\(error.localizedDescription)") }
-                return
+            let supported = (try? VNRecognizeTextRequest.supportedRecognitionLanguages(
+                for: .accurate,
+                revision: VNRecognizeTextRequestRevision3
+            )) ?? []
+            var preferred = ["zh-Hans", "zh-Hans-CN", "en-US"].filter { supported.contains($0) }
+            if preferred.isEmpty { preferred = ["en-US"] }
+
+            func performOcr(_ languages: [String]) -> [VNRecognizedTextObservation] {
+                let request = VNRecognizeTextRequest()
+                request.recognitionLevel = .accurate
+                request.recognitionLanguages = languages
+                request.usesLanguageCorrection = true
+                let handler = VNImageRequestHandler(cgImage: image, options: [:])
+                do {
+                    try handler.perform([request])
+                } catch {
+                    return []
+                }
+                return request.results as? [VNRecognizedTextObservation] ?? []
             }
-            let observations = (request.results as? [VNRecognizedTextObservation] ?? []).sorted { left, right in
+
+            var observations = performOcr(preferred)
+            if observations.isEmpty && preferred != ["en-US"] {
+                // Some Intel runners only ship the English Vision model.
+                observations = performOcr(["en-US"])
+            }
+            observations.sort { left, right in
                 let leftTop = 1 - left.boundingBox.maxY
                 let rightTop = 1 - right.boundingBox.maxY
                 if abs(leftTop - rightTop) > 0.02 { return leftTop < rightTop }
