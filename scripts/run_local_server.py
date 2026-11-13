@@ -10,6 +10,7 @@ import hashlib
 import argparse
 import json
 import os
+import platform
 import re
 import shutil
 import socket
@@ -1115,6 +1116,8 @@ def _start_llama_server(config: dict):
             "-b", "512", "-ub", "512", "-fa", "on", "-lm", load_mode,
             "-np", "1", "--no-webui",
         ]
+        if sys.platform == "darwin":
+            args.extend(["-ngl", "99" if platform.machine() == "arm64" else "0"])
         creationflags = 0
         if sys.platform.startswith("win"):
             creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)

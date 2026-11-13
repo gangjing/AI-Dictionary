@@ -18,6 +18,7 @@ import tarfile
 import urllib.request
 import zipfile
 import tempfile
+import time
 import hashlib
 import os
 import shutil
@@ -454,6 +455,14 @@ if __name__ == "__main__":
             if "AIDICT_NATIVE_SMOKE_PASS" not in smoke.stdout:
                 raise RuntimeError("Native macOS smoke failed: " + smoke.stdout + smoke.stderr)
             print(smoke.stdout)
+        time.sleep(1)
+        with tempfile.TemporaryDirectory() as user_dir:
+            env = {**os.environ, "AIDICT_USER_DATA_DIR": user_dir}
+            selftest = subprocess.run([str(app / "Contents" / "MacOS" / "AIDictionary"), "--self-test"], env=env,
+                                      capture_output=True, text=True, timeout=180)
+            if "AIDICT_MAC_SELFTEST_PASS" not in selftest.stdout:
+                raise RuntimeError("Native macOS self-test failed: " + selftest.stdout + selftest.stderr)
+            print(selftest.stdout)
         build_macos_dmg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.4-macOS-{args.arch}.dmg", "AI Dictionary 1.0.4")
         build_macos_pkg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.4-macOS-{args.arch}.pkg")
     write_checksums()

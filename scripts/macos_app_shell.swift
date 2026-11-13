@@ -145,6 +145,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
     var serverProcess: Process?
     var smokeNavigationMessages = 0
     let smokeTest = ProcessInfo.processInfo.arguments.contains("--smoke-test")
+    let selfTest = ProcessInfo.processInfo.arguments.contains("--self-test")
+    var selfTestStarted = false
+    var selfTestFailed = false
+    var selfTestResults: [String] = []
     let serverPort = 14205
 
     var closeToTray: Bool = true
@@ -563,6 +567,27 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
         return status == .success ? value : nil
     }
 
+    /// Read the current AX selection without any app-name guard (used by the self-test).
+    func readAXSelectionText() -> String? {
+        guard AXIsProcessTrusted() else { return nil }
+        let systemWide = AXUIElementCreateSystemWide()
+        var focusedValue: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedValue) == .success,
+              let focusedValue = focusedValue else { return nil }
+        let element = focusedValue as! AXUIElement
+        if (axAttribute(element, kAXSubroleAttribute) as? String) == "AXSecureTextField" { return nil }
+        if let text = axAttribute(element, kAXSelectedTextAttribute) as? String, !text.isEmpty {
+            return text
+        }
+        if let parentValue = axAttribute(element, kAXParentAttribute) {
+            let parent = parentValue as! AXUIElement
+            if let text = axAttribute(parent, kAXSelectedTextAttribute) as? String, !text.isEmpty {
+                return text
+            }
+        }
+        return nil
+    }
+
     // MARK: - Selection panel
 
     func showResult(text: String, source: String, app: String, method: String) {
@@ -868,6 +893,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         if closeToTray && !isExplicitQuit {
+            resultPanel?.orderOut(nil)
             sender.orderOut(nil)
             return false
         }
@@ -1058,6 +1084,134 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
         task.resume()
     }
 
+    // MARK: - Native self-test (used by CI)
+
+    func selfTestCheck(_ name: String, _ condition: Bool, _ detail: String = "") {
+        selfTestResults.append("\(name)=\(condition ? "ok" : "fail")\(detail.isEmpty ? "" : "(\(detail))")")
+        if !condition { selfTestFailed = true }
+    }
+
+    func selfTestFinish() {
+        let marker = selfTestFailed ? "AIDICT_MAC_SELFTEST_FAIL" : "AIDICT_MAC_SELFTEST_PASS"
+        print("\(marker) " + selfTestResults.joined(separator: "; "))
+        fflush(stdout)
+        if let proc = serverProcess, proc.isRunning { proc.terminate() }
+        exit(selfTestFailed ? 1 : 0)
+    }
+
+    func runSelfTest() {
+        guard !selfTestStarted else { return }
+        guard resultReady else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { self.runSelfTest() }
+            return
+        }
+        selfTestStarted = true
+        selfTestCheck("hotkeys", hotKeyRefs.count >= 3, "registered=\(hotKeyRefs.count)")
+
+        let popupText = "macOS popup self test \(UUID().uuidString.prefix(6))"
+        showResult(text: popupText, source: "selection", app: "SelfTest", method: "self-test")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            let visibleFrame = NSScreen.main?.visibleFrame ?? .zero
+            let frame = self.resultPanel.frame
+            let inside = frame.minX >= visibleFrame.minX - 1
+                && frame.minY >= visibleFrame.minY - 1
+                && frame.maxX <= visibleFrame.maxX + 1
+                && frame.maxY <= visibleFrame.maxY + 1
+            self.selfTestCheck("popup.visible", self.resultPanel.isVisible)
+            self.selfTestCheck("popup.inside", inside, "frame=\(Int(frame.width))x\(Int(frame.height))")
+            self.resultWebView.evaluateJavaScript("document.getElementById('trayMiniInput').value") { value, _ in
+                let injected = (value as? String) ?? ""
+                self.selfTestCheck("popup.inject", injected == popupText, "chars=\(injected.count)")
+                self.showMainWindowAction()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    self.selfTestCheck("popup.hiddenAfterRestore", !self.resultPanel.isVisible)
+                    self.selfTestClipboard()
+                }
+            }
+        }
+    }
+
+    func selfTestClipboard() {
+        window.orderOut(nil)
+        clipboardCaptureEnabled = true
+        let text = "macOS clipboard self test \(UUID().uuidString.prefix(6))"
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        lastClipboardChange = pasteboard.changeCount - 1
+        pollClipboard()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            self.selfTestCheck("clipboard.popup", self.resultPanel.isVisible)
+            self.resultWebView.evaluateJavaScript("document.getElementById('trayMiniInput').value") { value, _ in
+                self.selfTestCheck("clipboard.inject", ((value as? String) ?? "") == text)
+                self.clipboardCaptureEnabled = false
+                self.selfTestOcr()
+            }
+        }
+    }
+
+    func selfTestOcr() {
+        guard let image = makeSelfTestOcrImage() else {
+            self.selfTestCheck("ocr.image", false)
+            self.selfTestSelection()
+            return
+        }
+        recognize(image: image)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+            self.webView.evaluateJavaScript("document.querySelectorAll('.ocr-line-input').length") { value, _ in
+                let count = (value as? Int) ?? Int((value as? Double) ?? 0)
+                self.selfTestCheck("ocr.vision", count > 0, "lines=\(count)")
+                self.selfTestSelection()
+            }
+        }
+    }
+
+    func makeSelfTestOcrImage() -> CGImage? {
+        let size = NSSize(width: 900, height: 190)
+        let image = NSImage(size: size)
+        image.lockFocus()
+        NSColor.white.setFill()
+        NSRect(origin: .zero, size: size).fill()
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 28, weight: .semibold),
+            .foregroundColor: NSColor.black
+        ]
+        ("AI Dictionary local OCR self test" as NSString).draw(
+            at: NSPoint(x: 24, y: 70),
+            withAttributes: attributes
+        )
+        image.unlockFocus()
+        var rect = NSRect(origin: .zero, size: size)
+        return image.cgImage(forProposedRect: &rect, context: nil, hints: nil)
+    }
+
+    func selfTestSelection() {
+        guard AXIsProcessTrusted() else {
+            selfTestResults.append("selection=skipped(no accessibility)")
+            selfTestFinish()
+            return
+        }
+        let testWindow = NSWindow(
+            contentRect: NSRect(x: 80, y: 80, width: 500, height: 120),
+            styleMask: [.titled],
+            backing: .buffered,
+            defer: false
+        )
+        let field = NSTextField(frame: NSRect(x: 12, y: 40, width: 460, height: 28))
+        field.stringValue = "macOS AX selection self test"
+        testWindow.contentView = field
+        testWindow.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        field.becomeFirstResponder()
+        field.selectText(nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            let text = self.readAXSelectionText() ?? ""
+            self.selfTestCheck("selection.ax", text.contains("macOS AX selection"), "chars=\(text.count)")
+            testWindow.orderOut(nil)
+            self.selfTestFinish()
+        }
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         if let proc = serverProcess, proc.isRunning {
             proc.terminate()
@@ -1076,6 +1230,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
         if view === resultWebView {
             resultReady = true
             if pendingResult != nil { injectPendingResult() }
+            return
+        }
+        if selfTest, view === webView {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                self.runSelfTest()
+            }
             return
         }
         guard smokeTest, view === webView else { return }
