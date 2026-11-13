@@ -4,10 +4,10 @@ AI Dictionary — Cross-Platform Installer Builder (`scripts/build_installers.py
 Generates:
 1. macOS Native `.icns` & Windows `.ico` icons from our custom vector logo.
 2. macOS Universal Binary (`arm64` + `x86_64`) `AI Dictionary.app` bundle (`WKWebView` native shell + 14,625-entry offline `dictionary.db` + native `Vision` OCR / `Accessibility` bridge), signed with `codesign`.
-3. `dist/installers/AI-Dictionary-1.0.4-macOS-arm64.dmg`
-4. `dist/installers/AI-Dictionary-1.0.4-macOS-x64.dmg`
-5. `dist/installers/AI-Dictionary-1.0.4-macOS-Universal.pkg`
-6. `dist/installers/AI-Dictionary-1.0.4-Windows-x64-Setup.zip` (with `Install-Windows.ps1`, `Uninstall-Windows.ps1`, `Start-AIDictionary.bat`, `icon.ico`, and `.github/workflows/build-installers.yml` for signed MSI/NSIS builds).
+3. `dist/installers/AI-Dictionary-1.0.5-macOS-arm64.dmg`
+4. `dist/installers/AI-Dictionary-1.0.5-macOS-x64.dmg`
+5. `dist/installers/AI-Dictionary-1.0.5-macOS-Universal.pkg`
+6. `dist/installers/AI-Dictionary-1.0.5-Windows-x64-Setup.zip` (with `Install-Windows.ps1`, `Uninstall-Windows.ps1`, `Start-AIDictionary.bat`, `icon.ico`, and `.github/workflows/build-installers.yml` for signed MSI/NSIS builds).
 7. `dist/installers/SHA256SUMS.txt`
 """
 
@@ -171,7 +171,7 @@ def build_macos_app_bundle(icns_path: Path, arch_mode: str = "universal") -> Pat
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.4</string>
+    <string>1.0.5</string>
     <key>CFBundleVersion</key>
     <string>102</string>
     <key>LSMinimumSystemVersion</key>
@@ -230,7 +230,7 @@ def build_macos_pkg(app_dir: Path, pkg_path: Path) -> None:
             "--identifier",
             "com.aidictionary.desktop.pkg",
             "--version",
-            "1.0.4",
+            "1.0.5",
             str(pkg_path),
         ]
     )
@@ -305,8 +305,8 @@ Write-Host "[OK] AI Dictionary has been completely uninstalled." -ForegroundColo
 
     nsis_script = r"""; AI Dictionary v1.0 — NSIS Windows x64 Installer Script
 !define APP_NAME "AI Dictionary"
-!define APP_VERSION "1.0.4"
-OutFile "AI-Dictionary-1.0.4-Windows-x64-Setup.exe"
+!define APP_VERSION "1.0.5"
+OutFile "AI-Dictionary-1.0.5-Windows-x64-Setup.exe"
 InstallDir "$LOCALAPPDATA\Programs\AI Dictionary"
 Icon "app\icon.ico"
 RequestExecutionLevel user
@@ -349,7 +349,7 @@ def clean_user_database(destination: Path) -> None:
 
 
 def package_webview2(destination: Path) -> None:
-    version = "1.0.4314.35"
+    version = "1.0.5314.35"
     destination.mkdir(parents=True, exist_ok=True)
     package = DIST_DIR / f"webview2-{version}.nupkg"
     if not package.exists():
@@ -417,12 +417,12 @@ def write_legacy_ci_aliases() -> None:
 
     The repository's PAT cannot update `.github/workflows/` (missing workflow scope),
     so the checked-in workflow still looks for *1.0.2* artifacts. In CI only, emit
-    copies with that legacy name; local builds keep the real 1.0.4 names.
+    copies with that legacy name; local builds keep the real 1.0.5 names.
     """
     if os.environ.get("GITHUB_ACTIONS") != "true":
         return
-    for artifact in INSTALLERS_DIR.glob("*1.0.4*"):
-        alias = artifact.with_name(artifact.name.replace("1.0.4", "1.0.2"))
+    for artifact in INSTALLERS_DIR.glob("*1.0.5*"):
+        alias = artifact.with_name(artifact.name.replace("1.0.5", "1.0.2"))
         if not alias.exists():
             shutil.copy2(artifact, alias)
 
@@ -441,7 +441,7 @@ if __name__ == "__main__":
     INSTALLERS_DIR.mkdir(parents=True, exist_ok=True)
     build_backend()
     if args.platform == "windows":
-        build_windows_installer_bundle(ICONS_DIR / "icon.ico", INSTALLERS_DIR / "AI-Dictionary-1.0.4-Windows-x64-Setup.zip")
+        build_windows_installer_bundle(ICONS_DIR / "icon.ico", INSTALLERS_DIR / "AI-Dictionary-1.0.5-Windows-x64-Setup.zip")
     else:
         # Build the bridge for the same architecture as the packaged runtime.
         target = "arm64" if args.arch == "arm64" else "x86_64"
@@ -463,7 +463,7 @@ if __name__ == "__main__":
             if "AIDICT_MAC_SELFTEST_PASS" not in selftest.stdout:
                 raise RuntimeError("Native macOS self-test failed: " + selftest.stdout + selftest.stderr)
             print(selftest.stdout)
-        build_macos_dmg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.4-macOS-{args.arch}.dmg", "AI Dictionary 1.0.4")
-        build_macos_pkg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.4-macOS-{args.arch}.pkg")
+        build_macos_dmg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.5-macOS-{args.arch}.dmg", "AI Dictionary 1.0.5")
+        build_macos_pkg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.5-macOS-{args.arch}.pkg")
     write_checksums()
     write_legacy_ci_aliases()

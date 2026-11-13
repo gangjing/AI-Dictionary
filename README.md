@@ -1,10 +1,10 @@
-> **1.0.4 更新：** 修复从托盘恢复时迷你弹窗在 125%/150%/200% DPI 下越界、以及双击托盘被单击逻辑抢占的问题；同时优化 Hy-MT2 推理参数（物理核心、Flash Attention、mlock、单槽）并新增「预加载模型」，Q6_K 短句翻译由约 2.2s 降至约 0.6s（Q4_K_M 约 0.4s）。Windows/macOS 的全局划词、剪贴板取词、全局热键、区域截图 OCR 与真实 Hy-MT2 推理均已接入；Windows 1.0.4 安装包已在本机构建、安装并运行 `--self-test` 验证，macOS 同构 Swift 实现需在 macOS 构建机/真机完成编译与权限实测。签名与公证仍未完成。
+> **1.0.5 更新：** 以 Windows 1.0.4 为模板补齐 macOS：托盘恢复弹窗边界/置顶、主窗口隐藏时关闭弹窗、全局热键、剪贴板取词、AX 划词、Vision OCR 与面板注入全部加入原生自测；macOS CI 在 arm64 / x64 上通过 `--smoke-test` 与 `--self-test`。Apple Silicon 启用 Metal（`-ngl 99`），Intel Mac 回退 CPU（`-ngl 0`），并保留物理核心、Flash Attention、mlock/预加载等速度优化。Windows 安装包与 macOS DMG/PKG 均已重建。
 
 <p align="center">
   <img src="public/assets/logo.svg" width="96" height="96" alt="AI Dictionary Logo" />
 </p>
 
-<h1 align="center">AI Dictionary v1.0.4</h1>
+<h1 align="center">AI Dictionary v1.0.5</h1>
 
 <p align="center">
   <strong>Windows / macOS 双平台本地离线 AI 词典与翻译桌面端（Hy-MT2 + llama.cpp + SQLite FTS5）</strong>
@@ -12,7 +12,7 @@
 
 ---
 
-## 1.0.4 完成度
+## 1.0.5 完成度
 
 | 能力 | Windows | macOS | 说明 |
 |---|---|---|---|
@@ -33,14 +33,14 @@
 
 ## 安装包
 
-构建产物位于 `dist/installers/`（1.0.4）：
+构建产物位于 `dist/installers/`（1.0.5）：
 
 | 平台 | 文件 |
 |---|---|
-| Windows 10/11 x64 | `AI-Dictionary-1.0.4-Windows-x64-Setup.exe`（NSIS，含 WebView2 检测、llama.cpp CPU 运行时） |
-| Windows 便携包 | `AI-Dictionary-1.0.4-Windows-x64-Setup.zip` |
-| macOS Apple Silicon | `AI-Dictionary-1.0.4-macOS-arm64.dmg` / `.pkg` |
-| macOS Intel | `AI-Dictionary-1.0.4-macOS-x64.dmg` / `.pkg` |
+| Windows 10/11 x64 | `AI-Dictionary-1.0.5-Windows-x64-Setup.exe`（NSIS，含 WebView2 检测、llama.cpp CPU 运行时） |
+| Windows 便携包 | `AI-Dictionary-1.0.5-Windows-x64-Setup.zip` |
+| macOS Apple Silicon | `AI-Dictionary-1.0.5-macOS-arm64.dmg` / `.pkg` |
+| macOS Intel | `AI-Dictionary-1.0.5-macOS-x64.dmg` / `.pkg` |
 
 用户数据：macOS `~/Library/Application Support/AIDictionary/`；Windows `%LOCALAPPDATA%\AIDictionary\`。升级/卸载不会主动删除。
 
@@ -97,7 +97,7 @@ powershell.exe -NoProfile -STA -ExecutionPolicy Bypass `
 ## 文档索引
 
 - [产品需求文档 (AI_Dictionary_PRD_v1.0.md)](AI_Dictionary_PRD_v1.0.md)
-- [1.0.4 构建与验证记录](docs/RELEASE_1.0.4.md)
+- [1.0.5 构建与验证记录](docs/RELEASE_1.0.5.md)
 - [数据与模型许可证台账](docs/DATA_LICENSE_LEDGER.md)
 - [1.0.1 代码检查与修复记录](docs/BUG_REVIEW_1.0.1.md)
 - [1.0.2 Windows 界面/DPI 修复记录](docs/UI_REVIEW_1.0.2.md)

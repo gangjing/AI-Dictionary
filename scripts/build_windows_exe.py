@@ -36,7 +36,7 @@ def main():
         lines.append(f'RMDir "$INSTDIR\\{item.relative_to(PAYLOAD)}"')
     manifest = PAYLOAD / 'uninstall-manifest.nsh'
     manifest.write_text('\n'.join(lines), encoding='utf-8-sig')
-    output = DIST / 'installers/AI-Dictionary-1.0.4-Windows-x64-Setup.exe'
+    output = DIST / 'installers/AI-Dictionary-1.0.5-Windows-x64-Setup.exe'
     subprocess.run([str(args.makensis.resolve()), '/V3', '/DPAYLOAD=' + str(PAYLOAD),
                     '/DOUTPUT=' + str(output), '/DBOOTSTRAPPER=' + str(args.bootstrapper.resolve()),
                     '/DUNINSTALL_MANIFEST=' + str(manifest), str(ROOT / 'scripts/windows_installer.nsi')], check=True)

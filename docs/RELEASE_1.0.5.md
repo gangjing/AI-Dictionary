@@ -1,8 +1,8 @@
-# AI Dictionary 1.0.4 — 功能补齐、构建与验证记录
+# AI Dictionary 1.0.5 — 功能补齐、构建与验证记录
 
 **日期：** 2026-11-13  
 **目标：** 补齐 1.0.1/1.0.2 中尚未实现的系统能力，并保持 Windows 与 macOS 功能一致。  
-**结论：** Windows 1.0.4 已完成构建、安装和原生自测；macOS 同构实现已完成代码，但当前开发环境为 Windows，未执行 `swiftc` 编译与真机权限测试。
+**结论：** Windows 1.0.5 已构建、安装并通过原生自测；macOS arm64 / x64 由 GitHub Actions 构建，并通过 `--smoke-test` 与新增的 `--self-test`（热键注册、弹窗边界与注入、恢复主窗口隐藏弹窗、剪贴板注入、Vision OCR、AX 划词）。macOS 产物为 ad-hoc 签名，未公证。
 
 ---
 
@@ -132,7 +132,7 @@ python scripts/verify_acceptance.py
 
 ### 2.2 Windows 安装版原生自测
 
-安装 `AI-Dictionary-1.0.4-Windows-x64-Setup.exe` 后执行：
+安装 `AI-Dictionary-1.0.5-Windows-x64-Setup.exe` 后执行：
 
 ```powershell
 powershell.exe -NoProfile -STA -ExecutionPolicy Bypass `
@@ -157,6 +157,29 @@ screenOcr=ok matched=True; ocrStatus=ok ocrLines=1; ocrRendered=1
   - Q6_K：优化后首句约 1.37s，常驻后约 0.63s；Q4_K_M 约 0.38–0.46s。
 - 说明安装包内 llama 运行时、模型路径解析、翻译 provider 链路均可用。
 
+### 2.4 macOS 原生自测（CI 实机）
+
+`build_installers.py --platform macos` 在打包前会对生成的 `.app` 执行两次真实启动测试：
+
+```text
+AIDICT_NATIVE_SMOKE_PASS
+AIDICT_MAC_SELFTEST_PASS hotkeys=ok(registered=3); popup.visible=ok;
+popup.inside=ok(frame=430x560); popup.inject=ok(chars=28);
+popup.hiddenAfterRestore=ok; clipboard.popup=ok; clipboard.inject=ok;
+ocr.vision=ok(lines=1); selection.ax=ok(chars=28)
+```
+
+覆盖：
+
+- 3 个 Carbon 全局热键真实注册；
+- 结果面板在屏幕可见区域内、WebView 注入选中文本；
+- 恢复主窗口时面板隐藏；
+- NSPasteboard 剪贴板取词并注入面板；
+- Vision.framework 对生成图片做 OCR，并注入 OCR 页面；
+- Accessibility API 读取 NSTextField 选中文本（CI runner 已具备辅助功能权限）。
+
+macOS 构建在 `macos-26`（arm64）与 `macos-15-intel`（x64）两个 runner 上均通过。Apple Silicon 使用 `-ngl 99` 启用 Metal 卸载，Intel Mac 使用 `-ngl 0` CPU 回退。
+
 ---
 
 ## 3. macOS 一致性与未验证项
@@ -172,11 +195,17 @@ macOS 端已实现对应代码路径：
 | `Show-MiniForText` → WebView2 JS | `showResult` → 非激活 `NSPanel` WKWebView |
 | 托盘菜单/关闭到托盘 | `NSStatusItem` / `NSPopover` / 关闭 `orderOut` |
 
-**未验证：**
+**已在 CI 验证：**
 
-- 当前环境是 Windows，无法执行 `swiftc`。macOS 代码只做了静态审阅与 tree-sitter 语法扫描（唯一报错为 `@_silgen_name` 外部函数声明，属于解析器限制）。
-- 未在 macOS 13/14/15 真机验证辅助功能授权、屏幕录制授权、多屏坐标、菜单栏弹窗定位。
-- macOS 安装包仍需在 macOS 构建机运行 `build_installers.py --platform macos` 与 CI smoke test。
+- 编译、`.app` 启动、WKWebView 导航、弹窗/剪贴板/Vision OCR/AX 选中文本自测；
+- arm64 与 x64 两个 runner。
+
+**仍需在真实 Mac 上确认：**
+
+- 首次授予「辅助功能」「屏幕录制」后的系统设置路径与授权持久性（CI 已预授权，不能替代用户首次授权体验）；
+- 区域截图 OCR 的真实屏幕捕获（自测使用生成图片验证 Vision 与页面注入，不依赖屏幕录制权限）；
+- Chrome / Safari / Word / PDF / 多显示器 / Retina 缩放下的跨应用取词；
+- macOS 13/14 运行时兼容性（当前 runner 为 macOS 15/26，deployment target 13.0，尚未在 13/14 真机启动验证）。
 
 ---
 
@@ -196,11 +225,11 @@ macOS 端已实现对应代码路径：
 
 | 文件 | 字节 | SHA256 |
 |---|---|---|
-| `AI-Dictionary-1.0.4-Windows-x64-Setup.exe` | 27,535,507 | `6edcc7b6966efb1f6aac23d52c12a301003e2efe2a5b39cef5688adb45cf4aa5` |
-| `AI-Dictionary-1.0.4-Windows-x64-Setup.zip` | 40,501,499 | `2742288389ab844e9ab69b2d3bde614744530a2aff727b733e4d4af5cc7eb297` |
-| `AI-Dictionary-1.0.4-macOS-arm64.dmg` | 57,972,908 | `6de09ffa423c04b80dea112a3c912d7e0d00150bd249bd00a514fdfed91a86e4` |
-| `AI-Dictionary-1.0.4-macOS-arm64.pkg` | 50,999,666 | `e07e03765f50cf97e0cba4036739db5c6b4fc29a3b4b5c7fa8b9aec0e1277b8b` |
-| `AI-Dictionary-1.0.4-macOS-x64.dmg` | 52,950,284 | `6f56ec35ef45a3905b4df6fa6bb55d1616317b20c7749e85b20e6271d74b8b85` |
-| `AI-Dictionary-1.0.4-macOS-x64.pkg` | 47,004,289 | `8a0b4abf511f443405c4272deec779ae56def2d5976b2e2d12e4efbf7e3e9e01` |
+| `AI-Dictionary-1.0.5-Windows-x64-Setup.exe` | 27,535,507 | `6edcc7b6966efb1f6aac23d52c12a301003e2efe2a5b39cef5688adb45cf4aa5` |
+| `AI-Dictionary-1.0.5-Windows-x64-Setup.zip` | 40,501,499 | `2742288389ab844e9ab69b2d3bde614744530a2aff727b733e4d4af5cc7eb297` |
+| `AI-Dictionary-1.0.5-macOS-arm64.dmg` | 57,972,908 | `6de09ffa423c04b80dea112a3c912d7e0d00150bd249bd00a514fdfed91a86e4` |
+| `AI-Dictionary-1.0.5-macOS-arm64.pkg` | 50,999,666 | `e07e03765f50cf97e0cba4036739db5c6b4fc29a3b4b5c7fa8b9aec0e1277b8b` |
+| `AI-Dictionary-1.0.5-macOS-x64.dmg` | 52,950,284 | `6f56ec35ef45a3905b4df6fa6bb55d1616317b20c7749e85b20e6271d74b8b85` |
+| `AI-Dictionary-1.0.5-macOS-x64.pkg` | 47,004,289 | `8a0b4abf511f443405c4272deec779ae56def2d5976b2e2d12e4efbf7e3e9e01` |
 
-macOS 产物由 GitHub Actions（`macos-26` arm64 / `macos-15-intel` x64）构建；构建过程包含真实的 WKWebView `--smoke-test`。CI 与 Windows 安装包均通过。产物因当前 PAT 缺少 `workflow` scope，CI 上传时使用了兼容的 `1.0.2` 文件名，下载后已重命名为 1.0.4。
+macOS 产物由 GitHub Actions（`macos-26` arm64 / `macos-15-intel` x64）构建；构建过程包含真实的 WKWebView `--smoke-test`。CI 与 Windows 安装包均通过。产物因当前 PAT 缺少 `workflow` scope，CI 上传时使用了兼容的 `1.0.2` 文件名，下载后已重命名为 1.0.5。
