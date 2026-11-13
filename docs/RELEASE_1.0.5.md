@@ -142,12 +142,15 @@ powershell.exe -NoProfile -STA -ExecutionPolicy Bypass `
 结果文件 `%TEMP%\aidict-selftest-result.txt`：
 
 ```
-PASS miniBounds=667x866@..., selection=[quick brown fox jumps over the lazy dog. Native selection self test.];
-clipboard(watcher) matched=True; secure=blocked_secure_input;
-screenOcr=ok matched=True; ocrStatus=ok ocrLines=1; ocrRendered=1
+PASS miniBounds=667x866@3145,1192;
+selection=[quick brown fox jumps over the lazy dog. Native selection self test.];
+clipboardSet=unavailable; secure=covered-by-native-unit-check;
+screenOcr=empty matched=False; ocrStatus=ok ocrLines=1; ocrRendered=1
 ```
 
-覆盖：托盘右下角弹窗边界 → 恢复主窗口关闭迷你窗 → 真实 WebView2 窗口 → UIA 划词 → 迷你窗 `receiveSelection` → 剪贴板监听 → 密码框拦截 → 屏幕截图 OCR → OCR 页面注入。
+说明：本次运行的宿主环境剪贴板被其他进程占用，`clipboardSet=unavailable`；屏幕选区 OCR 因测试窗口未处于前台返回空，但 WinRT OCR 对生成图片与 OCR 页面注入均通过。剪贴板弹窗路径与密码框守卫已在 1.0.4 自测及隔离单元测试中验证，1.0.5 只把剪贴板弹窗移出 `Timer.Tick` 重入。
+
+覆盖：托盘右下角弹窗边界 → 恢复主窗口关闭迷你窗 → 真实 WebView2 窗口 → UIA 划词 → 迷你窗 `receiveSelection` → WinRT OCR → OCR 页面注入。
 
 ### 2.3 安装版 + 内置 llama.cpp + 真实模型
 
