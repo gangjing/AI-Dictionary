@@ -198,5 +198,9 @@ macOS 端已实现对应代码路径：
 |---|---|---|
 | `AI-Dictionary-1.0.4-Windows-x64-Setup.exe` | 27,535,507 | `6edcc7b6966efb1f6aac23d52c12a301003e2efe2a5b39cef5688adb45cf4aa5` |
 | `AI-Dictionary-1.0.4-Windows-x64-Setup.zip` | 40,501,499 | `2742288389ab844e9ab69b2d3bde614744530a2aff727b733e4d4af5cc7eb297` |
+| `AI-Dictionary-1.0.4-macOS-arm64.dmg` | 57,972,908 | `6de09ffa423c04b80dea112a3c912d7e0d00150bd249bd00a514fdfed91a86e4` |
+| `AI-Dictionary-1.0.4-macOS-arm64.pkg` | 50,999,666 | `e07e03765f50cf97e0cba4036739db5c6b4fc29a3b4b5c7fa8b9aec0e1277b8b` |
+| `AI-Dictionary-1.0.4-macOS-x64.dmg` | 52,950,284 | `6f56ec35ef45a3905b4df6fa6bb55d1616317b20c7749e85b20e6271d74b8b85` |
+| `AI-Dictionary-1.0.4-macOS-x64.pkg` | 47,004,289 | `8a0b4abf511f443405c4272deec779ae56def2d5976b2e2d12e4efbf7e3e9e01` |
 
-> 最终重建后以 `dist/installers/SHA256SUMS.txt` 为准。
+macOS 产物由 GitHub Actions（`macos-26` arm64 / `macos-15-intel` x64）构建；构建过程包含真实的 WKWebView `--smoke-test`。CI 与 Windows 安装包均通过。产物因当前 PAT 缺少 `workflow` scope，CI 上传时使用了兼容的 `1.0.2` 文件名，下载后已重命名为 1.0.4。
