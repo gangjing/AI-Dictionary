@@ -349,7 +349,7 @@ def clean_user_database(destination: Path) -> None:
 
 
 def package_webview2(destination: Path) -> None:
-    version = "1.0.5314.35"
+    version = "1.0.4314.35"
     destination.mkdir(parents=True, exist_ok=True)
     package = DIST_DIR / f"webview2-{version}.nupkg"
     if not package.exists():
