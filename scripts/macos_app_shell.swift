@@ -23,7 +23,7 @@ private func hotKeyEventHandler(
         EventParamName(kEventParamDirectObject),
         EventParamType(typeEventHotKeyID),
         nil,
-        UInt32(MemoryLayout<EventHotKeyID>.size),
+        MemoryLayout<EventHotKeyID>.size,
         nil,
         &hotKeyID
     )
@@ -60,7 +60,7 @@ final class OcrSelectionView: NSView {
         if selection.width > 0 && selection.height > 0 {
             NSGraphicsContext.saveGraphicsState()
             NSColor.clear.setFill()
-            NSRectFillUsingOperation(selection, NSCompositingOperation.copy)
+            selection.fill(using: .copy)
             NSGraphicsContext.restoreGraphicsState()
             NSColor(calibratedRed: 0.23, green: 0.51, blue: 0.96, alpha: 1).setStroke()
             let border = NSBezierPath(rect: selection)
