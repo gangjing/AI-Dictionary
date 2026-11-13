@@ -662,7 +662,8 @@ def build_user_db(db_path: Path) -> None:
             license TEXT NOT NULL DEFAULT 'Apache-2.0',
             status TEXT NOT NULL DEFAULT 'not_installed',
             is_active INTEGER NOT NULL DEFAULT 0,
-            installed_at TEXT
+            installed_at TEXT,
+            download_url TEXT DEFAULT ''
         );
 
         CREATE TABLE IF NOT EXISTS app_settings (
@@ -673,55 +674,64 @@ def build_user_db(db_path: Path) -> None:
         """
     )
 
-    # Seed default Hy-MT2 model registry records (PRD Section 8)
+    # Seed default Hy-MT2 model registry records (PRD Section 8).
+    # SHA256 values come from the Hugging Face LFS metadata; sizes are the official file sizes.
+    try:
+        cur.execute("ALTER TABLE model_registry ADD COLUMN download_url TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass
     models = [
         (
             "hymt2-1.8b-q4_k_m",
             "Hy-MT2-1.8B-GGUF",
             "Q4_K_M",
             "models/Hy-MT2-1.8B-Q4_K_M.gguf",
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            1213328588,
+            "dc5f44fcf1fa496ee7ad725982c0c8c553a4de00259b53af84c4b89fb0c06699",
+            1133080448,
             8,
             "Apache-2.0",
             "not_installed",
             1,
+            "https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF/resolve/main/Hy-MT2-1.8B-Q4_K_M.gguf",
         ),
         (
             "hymt2-1.8b-q6_k",
             "Hy-MT2-1.8B-GGUF",
             "Q6_K",
             "models/Hy-MT2-1.8B-Q6_K.gguf",
-            "a1b2c3d498fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            1578400972,
+            "d98fe604dec1f28f58f80d7d560f7177e584d3b8e5835862687660e5ff97cb40",
+            1474785120,
             16,
             "Apache-2.0",
             "not_installed",
             0,
+            "https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF/resolve/main/Hy-MT2-1.8B-Q6_K.gguf",
         ),
         (
             "hymt2-7b-q4_k_m",
             "Hy-MT2-7B-GGUF",
             "Q4_K_M",
             "models/Hy-MT2-7B-Q4_K_M.gguf",
-            "f9e8d7c698fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            4960685260,
+            "9f96256500f3fc1ab4d64336b58f52a949a95ad7516b0c229476eef782f9f77b",
+            4624648896,
             32,
             "Apache-2.0",
             "not_installed",
             0,
+            "https://huggingface.co/tencent/Hy-MT2-7B-GGUF/resolve/main/Hy-MT2-7B-Q4_K_M.gguf",
         ),
         (
             "hymt2-1.8b-q8_0",
             "Hy-MT2-1.8B-GGUF",
             "Q8_0",
             "models/Hy-MT2-1.8B-Q8_0.gguf",
-            "b8e8d7c698fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b811",
-            2050846720,
+            "5c3fe0b1408a5ceb0143184ef247b11b579c525f4b02b060e6c851bb76fef1a4",
+            1908528192,
             16,
             "Apache-2.0",
             "not_installed",
             0,
+            "https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF/resolve/main/Hy-MT2-1.8B-Q8_0.gguf",
         ),
     ]
     for m in models:
@@ -729,10 +739,14 @@ def build_user_db(db_path: Path) -> None:
             """
             INSERT OR IGNORE INTO model_registry (
                 id, model_name, quant, file_path, sha256, size_bytes,
-                recommended_ram_gb, license, status, is_active
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                recommended_ram_gb, license, status, is_active, download_url
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             m,
+        )
+        cur.execute(
+            "UPDATE model_registry SET sha256 = ?, size_bytes = ?, download_url = ?, file_path = ? WHERE id = ?",
+            (m[4], m[5], m[10], m[3], m[0]),
         )
 
     # Ensure migration columns exist on existing user_data.db
@@ -754,13 +768,19 @@ def build_user_db(db_path: Path) -> None:
         "hotkey_main_mac": "Option+Command+D",
         "hotkey_main_win": "Ctrl+Alt+D",
         "selection_icon_enabled": False,
-        "clipboard_fallback_enabled": False,
+        "clipboard_fallback_enabled": True,
         "context_enhanced_lookup": False,
         "auto_start": False,
         "idle_unload_minutes": 10,
         "default_target_lang": "zh",
         "tts_rate": 1.0,
         "onboarding_completed": True,
+        "translation_provider": "auto",
+        "translation_endpoint": "",
+        "translation_model": "",
+        "translation_api_key": "",
+        "llama_server_path": "",
+        "llama_model_path": "",
         "custom_glossary": {"zero-copy": "零拷贝", "consensus node": "共识节点", "failover": "故障转移"},
     }
     now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

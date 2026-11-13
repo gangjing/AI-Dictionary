@@ -58,6 +58,125 @@ class BackendTests(unittest.TestCase):
             self.assertEqual(ctx.exception.code, 400)
             ctx.exception.close()
 
+    def test_model_download_sha256(self):
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        import hashlib
+        import threading
+        import time
+
+        payload = b'model-bytes-' * 200000  # ~2.4 MB
+        digest = hashlib.sha256(payload).hexdigest()
+
+        class ModelHandler(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+
+            def do_GET(self):
+                self.send_response(200)
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+
+        server = ThreadingHTTPServer(('127.0.0.1', 0), ModelHandler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        target = srv.models_dir() / 'regression-model.gguf'
+        srv.MODEL_CATALOG['regression-model'] = {
+            'file_name': target.name,
+            'size_bytes': len(payload),
+            'sha256': digest,
+            'url': f'http://127.0.0.1:{server.server_port}/model.gguf',
+        }
+        conn = srv.get_user_conn()
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO model_registry
+            (id, model_name, quant, file_path, sha256, size_bytes, recommended_ram_gb, license, status, is_active, installed_at)
+            VALUES ('regression-model', 'Regression Model', 'Q4', ?, ?, ?, 4, 'Apache-2.0', 'not_installed', 0, NULL)
+            """,
+            (str(target), digest, len(payload)),
+        )
+        conn.commit()
+        conn.close()
+        try:
+            srv.start_model_download('regression-model')
+            deadline = time.time() + 30
+            state = {}
+            while time.time() < deadline:
+                state = srv.get_download_status('regression-model')
+                if state.get('status') in ('ready', 'error'):
+                    break
+                time.sleep(0.1)
+            self.assertEqual(state.get('status'), 'ready', state)
+            self.assertTrue(target.is_file())
+            self.assertEqual(hashlib.sha256(target.read_bytes()).hexdigest(), digest)
+        finally:
+            server.shutdown()
+            server.server_close()
+            target.unlink(missing_ok=True)
+            target.with_suffix(target.suffix + '.part').unlink(missing_ok=True)
+            srv.MODEL_CATALOG.pop('regression-model', None)
+            conn = srv.get_user_conn()
+            conn.execute("DELETE FROM model_registry WHERE id = 'regression-model'")
+            conn.commit()
+            conn.close()
+
+    def test_openai_compatible_translation_and_token_protection(self):
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        import threading
+
+        class MockHandler(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+
+            def _send(self, payload):
+                body = json.dumps(payload).encode()
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def do_GET(self):
+                self._send({'data': [{'id': 'mock-translator'}]})
+
+            def do_POST(self):
+                length = int(self.headers.get('Content-Length', '0'))
+                payload = json.loads(self.rfile.read(length) or b'{}')
+                text = payload['messages'][-1]['content']
+                self._send({'choices': [{'message': {'content': '【译】' + text}}]})
+
+        server = ThreadingHTTPServer(('127.0.0.1', 0), MockHandler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            srv.update_settings_rpc({
+                'translation_provider': 'openai',
+                'translation_endpoint': f'http://127.0.0.1:{server.server_port}/v1',
+                'translation_model': 'mock-translator',
+            })
+            result = srv.translate_rpc({
+                'request_id': 'mock-test',
+                'text': 'Check `config.json`, {user_name} and https://example.com.',
+                'source_lang': 'en',
+                'target_lang': 'zh',
+                'preserve_format': True,
+                'glossary': {'failover': '故障转移'},
+            })
+            self.assertEqual(result['status'], 'ok')
+            self.assertEqual(result['provider'], 'openai')
+            self.assertIn('`config.json`', result['translated_text'])
+            self.assertIn('{user_name}', result['translated_text'])
+            self.assertIn('https://example.com', result['translated_text'])
+            self.assertTrue(result['protected_tokens_verified'])
+            self.assertEqual(srv.translation_status()['ready'], True)
+        finally:
+            server.shutdown()
+            server.server_close()
+            srv.update_settings_rpc({
+                'translation_provider': 'auto',
+                'translation_endpoint': '',
+                'translation_model': '',
+            })
+
 
 class BrowserTests(unittest.TestCase):
     def test_browser_regressions(self):
@@ -128,6 +247,22 @@ class BrowserTests(unittest.TestCase):
                     out = ROOT / 'dist' / 'test-results'
                     out.mkdir(parents=True, exist_ok=True)
                     page.screenshot(path=str(out / f'{engine}-settings.png'))
+
+                    # Selection popup and OCR result receive paths used by the native shells.
+                    page.evaluate("receiveSelection('ubiquitous', {source:'selection', app:'Test App', method:'uia'})")
+                    page.wait_for_function("document.getElementById('trayMiniInput').value === 'ubiquitous'")
+                    page.wait_for_function("document.getElementById('trayMiniResultBody').innerText.includes('ubiquitous')")
+                    self.assertTrue(page.locator('#youdaoMiniPopover').is_visible())
+                    self.assertEqual(page.locator('#trayMiniSource').inner_text(), '划词 · Test App')
+                    page.evaluate("""() => receiveOcrResult({
+                        status: 'ok', text: 'Hello OCR', lines: [{text: 'Hello OCR', left: 1, top: 2, width: 3, height: 4}],
+                        language: 'zh-Hans-CN', elapsed_ms: 12, message: 'ok', width: 100, height: 40
+                    })""")
+                    page.evaluate("switchTab('ocr')")
+                    self.assertEqual(page.locator('.ocr-line-input').count(), 1)
+                    self.assertEqual(page.locator('.ocr-line-input').input_value(), 'Hello OCR')
+                    self.assertIn('识别完成', page.locator('#ocrStatusBadge').inner_text())
+
                     self.assertEqual(errors, [])
                     browser.close()
 

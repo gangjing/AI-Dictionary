@@ -12,8 +12,7 @@ data/*.db-shm
 data/*.db-wal
 *.part
 
-# Rust / Tauri build intermediates
-src-tauri/target/
+# Build intermediates
 node_modules/
 dist/backend/
 dist/pyinstaller-work/
@@ -32,3 +31,5 @@ dist/macos-x64/
 dist/macos-universal/
 
 dist/installers/*1.0.2*
+dist/installers/*1.0.3*
+dist/installers/*1.0.4*

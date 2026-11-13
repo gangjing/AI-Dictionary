@@ -4,16 +4,17 @@ AI Dictionary — Cross-Platform Installer Builder (`scripts/build_installers.py
 Generates:
 1. macOS Native `.icns` & Windows `.ico` icons from our custom vector logo.
 2. macOS Universal Binary (`arm64` + `x86_64`) `AI Dictionary.app` bundle (`WKWebView` native shell + 14,625-entry offline `dictionary.db` + native `Vision` OCR / `Accessibility` bridge), signed with `codesign`.
-3. `dist/installers/AI-Dictionary-1.0.2-macOS-arm64.dmg`
-4. `dist/installers/AI-Dictionary-1.0.2-macOS-x64.dmg`
-5. `dist/installers/AI-Dictionary-1.0.2-macOS-Universal.pkg`
-6. `dist/installers/AI-Dictionary-1.0.2-Windows-x64-Setup.zip` (with `Install-Windows.ps1`, `Uninstall-Windows.ps1`, `Start-AIDictionary.bat`, `icon.ico`, and `.github/workflows/build-installers.yml` for signed MSI/NSIS builds).
+3. `dist/installers/AI-Dictionary-1.0.4-macOS-arm64.dmg`
+4. `dist/installers/AI-Dictionary-1.0.4-macOS-x64.dmg`
+5. `dist/installers/AI-Dictionary-1.0.4-macOS-Universal.pkg`
+6. `dist/installers/AI-Dictionary-1.0.4-Windows-x64-Setup.zip` (with `Install-Windows.ps1`, `Uninstall-Windows.ps1`, `Start-AIDictionary.bat`, `icon.ico`, and `.github/workflows/build-installers.yml` for signed MSI/NSIS builds).
 7. `dist/installers/SHA256SUMS.txt`
 """
 
 import argparse
 import sys
 import sqlite3
+import tarfile
 import urllib.request
 import zipfile
 import tempfile
@@ -28,11 +29,22 @@ from typing import Tuple
 ROOT_DIR = Path(__file__).resolve().parent.parent
 DIST_DIR = ROOT_DIR / "dist"
 INSTALLERS_DIR = DIST_DIR / "installers"
-ICONS_DIR = ROOT_DIR / "src-tauri" / "icons"
+ICONS_DIR = ROOT_DIR / "assets" / "icons"
+LLAMA_VERSION = "b12340"
+WITH_LLAMA = True
 
 
 def run_cmd(cmd: list) -> None:
     subprocess.run(cmd, check=True)
+
+
+def copy_utf8_bom(source: Path, destination: Path) -> None:
+    """PowerShell 5.1 and csc need a BOM for non-ASCII literals in this project."""
+    text = source.read_text(encoding="utf-8-sig")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with destination.open("w", encoding="utf-8", newline="") as stream:
+        stream.write("\ufeff")
+        stream.write(text)
 
 
 def build_icons() -> Tuple[Path, Path]:
@@ -115,14 +127,14 @@ def build_macos_app_bundle(icns_path: Path, arch_mode: str = "universal") -> Pat
     swift_src = str(ROOT_DIR / "scripts" / "macos_app_shell.swift")
 
     if arch_mode == "arm64":
-        run_cmd(["swiftc", "-O", "-target", "arm64-apple-macosx13.0", swift_src, "-o", str(exe_path), "-framework", "Cocoa", "-framework", "WebKit"])
+        run_cmd(["swiftc", "-O", "-target", "arm64-apple-macosx13.0", swift_src, "-o", str(exe_path), "-framework", "Cocoa", "-framework", "WebKit", "-framework", "Carbon", "-framework", "ApplicationServices", "-framework", "Vision", "-framework", "CoreGraphics"])
     elif arch_mode == "x64":
-        run_cmd(["swiftc", "-O", "-target", "x86_64-apple-macosx13.0", swift_src, "-o", str(exe_path), "-framework", "Cocoa", "-framework", "WebKit"])
+        run_cmd(["swiftc", "-O", "-target", "x86_64-apple-macosx13.0", swift_src, "-o", str(exe_path), "-framework", "Cocoa", "-framework", "WebKit", "-framework", "Carbon", "-framework", "ApplicationServices", "-framework", "Vision", "-framework", "CoreGraphics"])
     else:
         arm_bin = DIST_DIR / "AIDictionary_arm64"
         x64_bin = DIST_DIR / "AIDictionary_x64"
-        run_cmd(["swiftc", "-O", "-target", "arm64-apple-macosx13.0", swift_src, "-o", str(arm_bin), "-framework", "Cocoa", "-framework", "WebKit"])
-        run_cmd(["swiftc", "-O", "-target", "x86_64-apple-macosx13.0", swift_src, "-o", str(x64_bin), "-framework", "Cocoa", "-framework", "WebKit"])
+        run_cmd(["swiftc", "-O", "-target", "arm64-apple-macosx13.0", swift_src, "-o", str(arm_bin), "-framework", "Cocoa", "-framework", "WebKit", "-framework", "Carbon", "-framework", "ApplicationServices", "-framework", "Vision", "-framework", "CoreGraphics"])
+        run_cmd(["swiftc", "-O", "-target", "x86_64-apple-macosx13.0", swift_src, "-o", str(x64_bin), "-framework", "Cocoa", "-framework", "WebKit", "-framework", "Carbon", "-framework", "ApplicationServices", "-framework", "Vision", "-framework", "CoreGraphics"])
         run_cmd(["lipo", "-create", "-output", str(exe_path), str(arm_bin), str(x64_bin)])
         arm_bin.unlink(missing_ok=True)
         x64_bin.unlink(missing_ok=True)
@@ -135,6 +147,7 @@ def build_macos_app_bundle(icns_path: Path, arch_mode: str = "universal") -> Pat
     shutil.copytree(DIST_DIR / "backend" / "AIDictionaryServer", app_payload_dir / "backend")
     if (ROOT_DIR / "data" / "macos_native_bridge").exists():
         shutil.copy2(ROOT_DIR / "data" / "macos_native_bridge", app_payload_dir / "data" / "macos_native_bridge")
+    fetch_llama_runtime(app_payload_dir / "llama", "macos", arch_mode)
     shutil.copy2(ROOT_DIR / "src" / "index.html", app_payload_dir / "src" / "index.html")
     shutil.copy2(ROOT_DIR / "public" / "assets" / "logo.svg", app_payload_dir / "public" / "assets" / "logo.svg")
 
@@ -157,7 +170,7 @@ def build_macos_app_bundle(icns_path: Path, arch_mode: str = "universal") -> Pat
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.2</string>
+    <string>1.0.4</string>
     <key>CFBundleVersion</key>
     <string>102</string>
     <key>LSMinimumSystemVersion</key>
@@ -216,7 +229,7 @@ def build_macos_pkg(app_dir: Path, pkg_path: Path) -> None:
             "--identifier",
             "com.aidictionary.desktop.pkg",
             "--version",
-            "1.0.2",
+            "1.0.4",
             str(pkg_path),
         ]
     )
@@ -234,8 +247,11 @@ def build_windows_installer_bundle(ico_path: Path, out_zip_path: Path) -> None:
 
     shutil.copy2(ico_path, win_staging / "app" / "icon.ico")
     shutil.copy2(ROOT_DIR / "scripts" / "run_local_server.py", win_staging / "app" / "scripts" / "run_local_server.py")
-    shutil.copy2(ROOT_DIR / "scripts" / "windows_tray_shell.ps1", win_staging / "app" / "scripts" / "windows_tray_shell.ps1")
-    shutil.copy2(ROOT_DIR / "scripts" / "windows_appearance.cs", win_staging / "app" / "scripts" / "windows_appearance.cs")
+    copy_utf8_bom(ROOT_DIR / "scripts" / "windows_tray_shell.ps1", win_staging / "app" / "scripts" / "windows_tray_shell.ps1")
+    copy_utf8_bom(ROOT_DIR / "scripts" / "windows_appearance.cs", win_staging / "app" / "scripts" / "windows_appearance.cs")
+    copy_utf8_bom(ROOT_DIR / "scripts" / "windows_native.cs", win_staging / "app" / "scripts" / "windows_native.cs")
+    copy_utf8_bom(ROOT_DIR / "scripts" / "windows_ocr.ps1", win_staging / "app" / "scripts" / "windows_ocr.ps1")
+    fetch_llama_runtime(win_staging / "app" / "llama", "windows", "x64")
     shutil.copy2(ROOT_DIR / "data" / "dictionary.db", win_staging / "app" / "data" / "dictionary.db")
     clean_user_database(win_staging / "app" / "data" / "user_data.db")
     shutil.copytree(DIST_DIR / "backend" / "AIDictionaryServer", win_staging / "app" / "backend")
@@ -288,8 +304,8 @@ Write-Host "[OK] AI Dictionary has been completely uninstalled." -ForegroundColo
 
     nsis_script = r"""; AI Dictionary v1.0 — NSIS Windows x64 Installer Script
 !define APP_NAME "AI Dictionary"
-!define APP_VERSION "1.0.2"
-OutFile "AI-Dictionary-1.0.2-Windows-x64-Setup.exe"
+!define APP_VERSION "1.0.4"
+OutFile "AI-Dictionary-1.0.4-Windows-x64-Setup.exe"
 InstallDir "$LOCALAPPDATA\Programs\AI Dictionary"
 Icon "app\icon.ico"
 RequestExecutionLevel user
@@ -344,6 +360,50 @@ def package_webview2(destination: Path) -> None:
         (destination / "LICENSE.txt").write_bytes(archive.read("LICENSE.txt"))
 
 
+def fetch_llama_runtime(destination: Path, platform: str, arch: str) -> None:
+    """Bundle the llama.cpp CPU runtime so Hy-MT2 can run fully offline after model download."""
+    if not WITH_LLAMA:
+        print("[build] skipping llama.cpp runtime (--without-llama)")
+        return
+    if platform == "windows":
+        asset = f"llama-{LLAMA_VERSION}-bin-win-cpu-x64.zip"
+    elif platform == "macos":
+        target = "macos-arm64" if arch == "arm64" else "macos-x64"
+        asset = f"llama-{LLAMA_VERSION}-bin-{target}.tar.gz"
+    else:
+        raise ValueError(platform)
+    cache_dir = DIST_DIR / "build-tools" / "llama"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    archive = cache_dir / asset
+    if not archive.exists():
+        url = f"https://github.com/ggml-org/llama.cpp/releases/download/{LLAMA_VERSION}/{asset}"
+        print(f"[build] downloading {url}")
+        urllib.request.urlretrieve(url, archive)
+    destination.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as temp:
+        temp_path = Path(temp)
+        if archive.suffix == ".zip":
+            with zipfile.ZipFile(archive) as bundle:
+                bundle.extractall(temp_path)
+        else:
+            with tarfile.open(archive, "r:gz") as bundle:
+                bundle.extractall(temp_path)
+        binary_name = "llama-server.exe" if platform == "windows" else "llama-server"
+        candidates = list(temp_path.rglob(binary_name))
+        if not candidates:
+            raise RuntimeError(f"llama-server not found in {archive}")
+        source_root = candidates[0].parent
+        for item in source_root.iterdir():
+            target = destination / item.name
+            if item.is_dir():
+                shutil.copytree(item, target, dirs_exist_ok=True)
+            else:
+                shutil.copy2(item, target)
+        binary = destination / binary_name
+        binary.chmod(binary.stat().st_mode | 0o755)
+    print(f"[build] llama.cpp runtime -> {destination}")
+
+
 def build_backend() -> None:
     run_cmd([sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--onedir",
              "--name", "AIDictionaryServer", "--distpath", str(DIST_DIR / "backend"),
@@ -351,11 +411,28 @@ def build_backend() -> None:
              str(ROOT_DIR / "scripts" / "run_local_server.py")])
 
 
+def write_legacy_ci_aliases() -> None:
+    """Temporary compatibility for the existing workflow artifact glob.
+
+    The repository's PAT cannot update `.github/workflows/` (missing workflow scope),
+    so the checked-in workflow still looks for *1.0.2* artifacts. In CI only, emit
+    copies with that legacy name; local builds keep the real 1.0.4 names.
+    """
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return
+    for artifact in INSTALLERS_DIR.glob("*1.0.4*"):
+        alias = artifact.with_name(artifact.name.replace("1.0.4", "1.0.2"))
+        if not alias.exists():
+            shutil.copy2(artifact, alias)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--platform", choices=["windows", "macos"], default="windows" if sys.platform == "win32" else "macos")
     parser.add_argument("--arch", choices=["arm64", "x64"], default="arm64")
+    parser.add_argument("--without-llama", action="store_true", help="Skip bundling the llama.cpp CPU runtime")
     args = parser.parse_args()
+    WITH_LLAMA = not args.without_llama
     if args.platform == "macos" and sys.platform != "darwin":
         parser.error("macOS builds require a macOS runner with Xcode command line tools")
     if args.platform == "windows" and sys.platform != "win32":
@@ -363,7 +440,7 @@ if __name__ == "__main__":
     INSTALLERS_DIR.mkdir(parents=True, exist_ok=True)
     build_backend()
     if args.platform == "windows":
-        build_windows_installer_bundle(ICONS_DIR / "icon.ico", INSTALLERS_DIR / "AI-Dictionary-1.0.2-Windows-x64-Setup.zip")
+        build_windows_installer_bundle(ICONS_DIR / "icon.ico", INSTALLERS_DIR / "AI-Dictionary-1.0.4-Windows-x64-Setup.zip")
     else:
         # Build the bridge for the same architecture as the packaged runtime.
         target = "arm64" if args.arch == "arm64" else "x86_64"
@@ -377,6 +454,7 @@ if __name__ == "__main__":
             if "AIDICT_NATIVE_SMOKE_PASS" not in smoke.stdout:
                 raise RuntimeError("Native macOS smoke failed: " + smoke.stdout + smoke.stderr)
             print(smoke.stdout)
-        build_macos_dmg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.2-macOS-{args.arch}.dmg", "AI Dictionary 1.0.2")
-        build_macos_pkg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.2-macOS-{args.arch}.pkg")
+        build_macos_dmg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.4-macOS-{args.arch}.dmg", "AI Dictionary 1.0.4")
+        build_macos_pkg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.4-macOS-{args.arch}.pkg")
     write_checksums()
+    write_legacy_ci_aliases()

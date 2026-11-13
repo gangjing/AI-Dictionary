@@ -26,7 +26,7 @@ try:
                 page.locator('#dictSearchInput').fill('brian')
                 page.locator('#dictSearchInput').press('Enter')
                 page.wait_for_function('currentEntry === null')
-                assert page.locator('.empty-state').is_visible()
+                assert page.locator('#dictMainColumn .empty-state').is_visible()
                 page.screenshot(path=str(output / f'{engine}-{scale}-dark.png'))
                 page.locator('#themeBtn').click()
                 assert page.evaluate("getComputedStyle(document.documentElement).colorScheme") == 'light'

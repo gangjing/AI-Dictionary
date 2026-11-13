@@ -1,4 +1,0 @@
-ecd4efccfa00ecd680592ada264c3d647dfad3b28feb7f67b30bd4ade1ca8aae  AI-Dictionary-1.0.0-Windows-x64-Setup.zip  (3.59 MB)
-9c6021152d1e043292576384561e7546d7616bd8ee108df6ae645102c30458a5  AI-Dictionary-1.0.0-macOS-Universal.pkg  (4.61 MB)
-350a95710b030bf4e47fe6a44945ede1fd8d4ce7d5dcf3ce9edbc3b7e755f8d4  AI-Dictionary-1.0.0-macOS-arm64.dmg  (5.08 MB)
-be920ca6d908f38ca5d812e48da948a77c5fdf8fbfb7cdc99af2a52f4b98f645  AI-Dictionary-1.0.0-macOS-x64.dmg  (5.08 MB)

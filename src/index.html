@@ -718,7 +718,7 @@
     .suggestions > div { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 8px; }
     .feature-notice { padding: 30px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; }
     .feature-notice p { color: var(--text-sub); margin-top: 10px; }
-    #page-translate > .card, #page-ocr > .card { display: none; }
+
     th { font-size: 12px; background: var(--bg-input); }
     td { font-size: 13px; overflow-wrap: anywhere; }
     .youdao-mini-popover { top: 72px; right: 32px; border-color: var(--border); border-radius: 12px; box-shadow: 0 12px 36px #00000044; }
@@ -780,6 +780,7 @@
       <div style="display:flex; align-items:center; gap:7px;">
         <img src="/assets/logo.svg" alt="logo" width="20" height="20" style="border-radius:5px;" />
         <strong style="font-size:13.5px;">AI 词典 · 迷你查词栏</strong>
+        <span id="trayMiniSource" class="tag blue" style="font-size:10px; padding:1px 6px; display:none;"></span>
       </div>
       <div style="display:flex; align-items:center; gap:5px;">
         <button class="tray-toggle-chip on" id="miniChipSelection" onclick="toggleTrayFeature('screen_selection_enabled')" style="font-size:11px; padding:2px 6px;"> 划词</button>
@@ -794,7 +795,7 @@
         <input
           id="trayMiniInput"
           type="text"
-          value="ubiquitous"
+          value=""
           style="flex:1; height:36px; font-size:13.5px;"
           placeholder="输入单词查词，或输入长句直接 AI 翻译..."
           onkeydown="if(event.key==='Enter') runTrayMiniQuery()"
@@ -944,7 +945,7 @@
         </div>
       </div>
 
-<nav class="nav-list" aria-label="主导航"><div class="nav-caption">工作区</div><button class="nav-btn active" id="nav-dictionary" onclick="switchPage('dictionary', this)"><span class="nav-label"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6a3 3 0 0 1 3 3v14a4 4 0 0 0-4-2H4z"/><path d="M13 7a3 3 0 0 1 3-3h4v15h-3a4 4 0 0 0-4 2"/></svg>词典</span></button><button class="nav-btn " id="nav-wordbook" onclick="switchPage('wordbook', this)"><span class="nav-label"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg>生词本</span><span id="sidebarWordCount" class="nav-count">0</span></button><button class="nav-btn " id="nav-history" onclick="switchPage('history', this)"><span class="nav-label"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7"/><path d="M12 7v5l3 2"/></svg>历史记录</span></button><div class="nav-caption secondary">更多工具</div><button class="nav-btn " id="nav-translate" onclick="switchPage('translate', this)"><span class="nav-label"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h12M9 3v2M6 5c0 5 4 9 8 10M13 5c0 5-4 9-9 10M14 21l4-11 4 11M16 17h4"/></svg>文本翻译</span><span class="nav-pending">开发中</span></button><button class="nav-btn " id="nav-ocr" onclick="switchPage('ocr', this)"><span class="nav-label"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5M7 9h10M7 13h10M7 17h6"/></svg>截图识别</span><span class="nav-pending">开发中</span></button><button class="nav-btn " id="nav-models" onclick="switchPage('models', this)"><span class="nav-label"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg>设置与词库</span></button></nav>
+<nav class="nav-list" aria-label="主导航"><div class="nav-caption">工作区</div><button class="nav-btn active" id="nav-dictionary" onclick="switchPage('dictionary', this)"><span class="nav-label"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6a3 3 0 0 1 3 3v14a4 4 0 0 0-4-2H4z"/><path d="M13 7a3 3 0 0 1 3-3h4v15h-3a4 4 0 0 0-4 2"/></svg>词典</span></button><button class="nav-btn " id="nav-wordbook" onclick="switchPage('wordbook', this)"><span class="nav-label"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg>生词本</span><span id="sidebarWordCount" class="nav-count">0</span></button><button class="nav-btn " id="nav-history" onclick="switchPage('history', this)"><span class="nav-label"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7"/><path d="M12 7v5l3 2"/></svg>历史记录</span></button><div class="nav-caption secondary">更多工具</div><button class="nav-btn " id="nav-translate" onclick="switchPage('translate', this)"><span class="nav-label"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h12M9 3v2M6 5c0 5 4 9 8 10M13 5c0 5-4 9-9 10M14 21l4-11 4 11M16 17h4"/></svg>文本翻译</span></button><button class="nav-btn " id="nav-ocr" onclick="switchPage('ocr', this)"><span class="nav-label"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5M7 9h10M7 13h10M7 17h6"/></svg>截图识别</span></button><button class="nav-btn " id="nav-models" onclick="switchPage('models', this)"><span class="nav-label"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg>设置与词库</span></button></nav>
       <div class="sidebar-bottom">
         <div class="status-row">
           <span>离线词库</span>
@@ -992,7 +993,15 @@
         <!-- =========================================================
              PAGE 2: 翻译 (AI Translation — High-Contrast Fixed!)
              ========================================================= -->
-        <section id="page-translate" class="page-view"><div class="feature-notice"><h1>文本翻译</h1><p>本地翻译引擎正在开发中，当前版本尚不可用。</p></div>
+        <section id="page-translate" class="page-view">
+          <div class="page-heading">
+            <div>
+              <div class="eyebrow">LOCAL AI TRANSLATION</div>
+              <h1>文本翻译</h1>
+              <p id="translateEngineText">正在检测本地翻译引擎...</p>
+            </div>
+            <span id="translateEngineBadge" class="tag" style="white-space:nowrap;">检测中</span>
+          </div>
           <div class="card">
             <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px;">
               <div style="display:flex; align-items:center; gap:8px;">
@@ -1013,6 +1022,7 @@
               </div>
 
               <div style="display:flex; align-items:center; gap:8px;">
+                <button class="btn" id="preloadModelBtn" onclick="preloadTranslation()">预加载模型</button>
                 <button class="btn btn-primary" onclick="runStudioTranslation()">开始翻译</button>
                 <button class="btn btn-danger" onclick="cancelStudioTranslation()">取消</button>
               </div>
@@ -1067,18 +1077,27 @@
         <!-- =========================================================
              PAGE 3: 截图 OCR (Local Vision OCR)
              ========================================================= -->
-        <section id="page-ocr" class="page-view"><div class="feature-notice"><h1>截图识别</h1><p>区域截图与文字识别正在开发中，当前版本尚不可用。</p></div>
+        <section id="page-ocr" class="page-view">
+          <div class="page-heading">
+            <div>
+              <div class="eyebrow">SCREEN OCR</div>
+              <h1>截图识别</h1>
+              <p id="ocrStatusText">框选屏幕区域，使用系统本地 OCR 识别中英文，再一键送入翻译。</p>
+            </div>
+            <span id="ocrStatusBadge" class="tag" style="white-space:nowrap;">就绪</span>
+          </div>
           <div class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
               <div>
                 <h2 style="font-size:17px; font-weight:700;">本地截图文字识别 (OCR)</h2>
                 <p style="font-size:13px; color:var(--text-sub); margin-top:2px;">
-                  使用系统原生离线 OCR 识别中英文文本，识别结果可直接修改并一键送入翻译。
+                  识别结果可逐行编辑，再送入翻译；图片只在内存中处理，不写入磁盘。
                 </p>
               </div>
-              <div style="display:flex; gap:8px;">
-                <button class="btn" onclick="refreshNativeOcrAndAx()">重新识别样本</button>
-                <button class="btn btn-primary" onclick="sendOcrLinesToTranslator()">将文字送入翻译</button>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn btn-primary" onclick="startNativeOcr()">框选截图识别</button>
+                <button class="btn" onclick="copyOcrText()">复制全部</button>
+                <button class="btn" onclick="sendOcrLinesToTranslator()">送入翻译</button>
               </div>
             </div>
 
@@ -1104,7 +1123,10 @@
                 />
               </div>
               <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                <button class="btn" onclick="importSampleJsonBatch()">导入示例词表</button>
+                <button class="btn" onclick="startWordReview()">开始复习</button>
+                <button class="btn" onclick="document.getElementById('wordbookImportFile').click()">导入 JSON</button>
+                <input type="file" id="wordbookImportFile" accept=".json,application/json" style="display:none" onchange="importWordbookFile(this)" />
+                <a class="btn" href="/api/wordbook/json" download="wordbook.json">导出 JSON</a>
                 <a class="btn btn-primary" href="/api/wordbook/csv" download="wordbook.csv">导出 CSV</a>
               </div>
             </div>
@@ -1121,6 +1143,27 @@
               </thead>
               <tbody id="wordbookGridBody"></tbody>
             </table>
+          </div>
+
+          <div id="reviewCard" class="card" style="display:none; border-color:var(--primary);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+              <div>
+                <div class="eyebrow">EBBINGHAUS REVIEW</div>
+                <h2 style="font-size:18px; margin-top:4px;">生词复习</h2>
+              </div>
+              <span id="reviewProgress" class="tag blue"></span>
+            </div>
+            <div style="text-align:center; padding:14px 0 22px;">
+              <div id="reviewWord" style="font-size:38px; font-weight:800; letter-spacing:-0.02em;"></div>
+              <div id="reviewMeaning" style="font-size:15px; color:var(--text-sub); margin-top:10px; line-height:1.7;"></div>
+              <div id="reviewNote" style="font-size:13px; color:var(--text-muted); margin-top:8px;"></div>
+            </div>
+            <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+              <button class="btn btn-danger" onclick="rateWordReview(1)">不认识</button>
+              <button class="btn" onclick="rateWordReview(3)">有点模糊</button>
+              <button class="btn btn-primary" onclick="rateWordReview(5)">认识</button>
+              <button class="btn" onclick="endWordReview()">结束复习</button>
+            </div>
           </div>
         </section>
 
@@ -1169,12 +1212,16 @@
                 <input type="checkbox" id="settingCloseToTray" checked onchange="updateCloseToTraySetting(this.checked)" />
               </label>
               <label style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--bg-input); border-radius:8px; border:1px solid var(--border); cursor:pointer;">
-                <span>屏幕划词（开发中）</span>
-                <input type="checkbox" id="settingScreenSelection" disabled checked onchange="toggleTrayFeature('screen_selection_enabled')" />
+                <span>屏幕划词取词</span>
+                <input type="checkbox" id="settingScreenSelection" checked onchange="toggleTrayFeature('screen_selection_enabled')" />
               </label>
               <label style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--bg-input); border-radius:8px; border:1px solid var(--border); cursor:pointer;">
-                <span>剪贴板取词（开发中）</span>
-                <input type="checkbox" id="settingClipboardCapture" disabled onchange="toggleTrayFeature('clipboard_capture_enabled')" />
+                <span>剪贴板自动取词</span>
+                <input type="checkbox" id="settingClipboardCapture" onchange="toggleTrayFeature('clipboard_capture_enabled')" />
+              </label>
+              <label style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--bg-input); border-radius:8px; border:1px solid var(--border); cursor:pointer;">
+                <span>划词失败时使用复制回退</span>
+                <input type="checkbox" id="settingClipboardFallback" checked onchange="updateClipboardFallback(this.checked)" />
               </label>
               <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--bg-input); border-radius:8px; border:1px solid var(--border);">
                 <span>左键点击托盘图标动作</span>
@@ -1217,22 +1264,63 @@
           <div class="card">
             <h2 style="font-size:17px; font-weight:700; margin-bottom:4px;">本地翻译模型</h2>
             <p style="font-size:12.5px; color:var(--text-sub); margin-bottom:14px;">
-              模型下载与翻译引擎正在开发中。离线词典可正常使用。
+              下载并校验 Hy-MT2 GGUF 模型后，即可完全离线翻译。未安装模型时词典功能不受影响。
             </p>
             <div id="modelsListContainer" style="display:flex; flex-direction:column; gap:10px;"></div>
           </div>
 
-          <!-- Card 3: Global Shortcuts -->
+          <!-- Card 3: Translation engine -->
           <div class="card">
-            <h2 style="font-size:17px; font-weight:700; margin-bottom:12px;">全局快捷键（开发中）</h2>
+            <h2 style="font-size:17px; font-weight:700; margin-bottom:4px;">翻译引擎</h2>
+            <p style="font-size:12.5px; color:var(--text-sub); margin-bottom:14px;">
+              默认优先使用本机 Hy-MT2（llama-server）。也可以连接本机运行的任意 OpenAI 兼容服务（如 Ollama / LM Studio），全程不经过云端。
+            </p>
+            <div style="display:grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap:12px; font-size:13.5px;">
+              <label style="display:flex; flex-direction:column; gap:6px;">
+                <span>引擎模式</span>
+                <select id="translationProvider" style="height:34px;">
+                  <option value="auto">自动（优先 Hy-MT2）</option>
+                  <option value="llama">本机 Hy-MT2 / llama-server</option>
+                  <option value="openai">OpenAI 兼容本地服务</option>
+                </select>
+              </label>
+              <label style="display:flex; flex-direction:column; gap:6px;">
+                <span>模型名称（可选）</span>
+                <input id="translationModel" type="text" style="height:34px;" placeholder="hymt2-1.8b-q4_k_m 或 qwen2.5:7b" />
+              </label>
+              <label style="display:flex; flex-direction:column; gap:6px;">
+                <span>OpenAI 兼容地址</span>
+                <input id="translationEndpoint" type="text" style="height:34px;" placeholder="http://127.0.0.1:11434/v1" />
+              </label>
+              <label style="display:flex; flex-direction:column; gap:6px;">
+                <span>API Key（本地服务可留空）</span>
+                <input id="translationApiKey" type="password" style="height:34px;" placeholder="sk-..." />
+              </label>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; margin-top:12px;">
+              <button class="btn" onclick="testTranslationEngine()">测试连接</button>
+              <span id="translationEngineStatus" style="font-size:12.5px; color:var(--text-sub);"></span>
+            </div>
+          </div>
+
+          <!-- Card 4: Global Shortcuts -->
+          <div class="card">
+            <h2 style="font-size:17px; font-weight:700; margin-bottom:4px;">全局快捷键</h2>
+            <p style="font-size:12.5px; color:var(--text-sub); margin-bottom:12px;">
+              格式示例：Windows <code>Ctrl+Alt+T</code>，macOS <code>Option+Command+T</code>。修改后点击保存立即生效。
+            </p>
             <div style="display:grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap:12px; font-size:13.5px;">
               <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--bg-input); border-radius:8px; border:1px solid var(--border);">
-                <span>划词查词快捷键</span>
-                <input id="hotkeyLookupInput" disabled type="text" value="Option+Command+T" style="width:160px; height:32px; text-align:center;" />
+                <span>划词查词</span>
+                <input id="hotkeyLookupInput" type="text" style="width:170px; height:32px; text-align:center;" />
               </div>
               <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--bg-input); border-radius:8px; border:1px solid var(--border);">
-                <span>截图 OCR 快捷键</span>
-                <input id="hotkeyOcrInput" disabled type="text" value="Option+Command+S" style="width:160px; height:32px; text-align:center;" />
+                <span>截图 OCR</span>
+                <input id="hotkeyOcrInput" type="text" style="width:170px; height:32px; text-align:center;" />
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--bg-input); border-radius:8px; border:1px solid var(--border);">
+                <span>打开主窗口</span>
+                <input id="hotkeyMainInput" type="text" style="width:170px; height:32px; text-align:center;" />
               </div>
             </div>
             <div style="margin-top:12px; display:flex; justify-content:flex-end; gap:8px;">
@@ -1279,10 +1367,13 @@
     let toastTimer;
     let latestOcrLines = [];
     let currentTranslationReqId = '';
+    let reviewQueue = [];
+    let reviewIndex = 0;
     let trayState = {
       close_to_tray: true,
       screen_selection_enabled: true,
       clipboard_capture_enabled: false,
+      clipboard_fallback_enabled: true,
       tray_click_action: 'mini_popover'
     };
 
@@ -1416,14 +1507,48 @@
       runTrayMiniQuery();
     }
 
+    function setMiniSource(meta) {
+      const badge = document.getElementById('trayMiniSource');
+      if (!badge) return;
+      if (!meta) { badge.style.display = 'none'; return; }
+      const labels = { selection: '划词', clipboard: '剪贴板', manual: '手动' };
+      const bits = [];
+      if (labels[meta.source]) bits.push(labels[meta.source]);
+      if (meta.app) bits.push(meta.app.length > 24 ? meta.app.slice(0, 24) + '…' : meta.app);
+      if (meta.method === 'clipboard') bits.push('剪贴板回退');
+      badge.textContent = bits.join(' · ') || '查词';
+      badge.style.display = 'inline-flex';
+    }
+
+    window.receiveSelection = function (text, meta) {
+      const q = (text || '').trim();
+      if (!q) return;
+      const input = document.getElementById('trayMiniInput');
+      if (input) input.value = q;
+      setMiniSource(meta || { source: 'selection' });
+      postToNativeShell({ action: 'selectionRendered', text: q, source: (meta && meta.source) || 'selection' });
+      if (document.body.classList.contains('tray-only-mode')) {
+        runTrayMiniQuery();
+      } else {
+        openYoudaoMiniPopover();
+      }
+    };
+
+    function hasNativeShell() {
+      return !!(window.webkit?.messageHandlers?.nativeShell || window.chrome?.webview);
+    }
+
     async function runTrayMiniQuery() {
       const generation = ++miniGeneration;
       miniEntry = null;
       const q = (document.getElementById('trayMiniInput')?.value || '').trim();
       const box = document.getElementById('trayMiniResultBody');
-      if (!q || !box) return;
+      if (!box) return;
+      if (!q) {
+        box.innerHTML = `<div style="padding:18px 8px; color:var(--text-sub); text-align:center;">选中文字后按热键，或在上面输入单词 / 句子。</div>`;
+        return;
+      }
 
-      // If input has spaces or is a sentence (>25 chars), run instant AI translation; otherwise lookup dictionary first
       const isSentence = q.split(/\s+/).length > 3 || q.length > 28;
       if (!isSentence) {
         const res = await fetch('/api/lookup?q=' + encodeURIComponent(q));
@@ -1444,23 +1569,35 @@
                 <div>
                   <strong style="font-size:20px;">${escapeHtml(e.lemma)}</strong>
                   <span class="tag green" style="margin-left:6px;">${data.elapsed_ms} ms</span>
+                  ${e.matched_via !== 'exact' ? `<span class="tag blue" style="margin-left:4px;">${escapeHtml(e.matched_via)}</span>` : ''}
                 </div>
                 <button class="btn btn-primary" style="height:26px; padding:0 10px; font-size:12px;" onclick="saveCurrentEntry(miniEntry)">收藏</button>
               </div>
-              <div style="display:flex; gap:8px; align-items:center; font-size:12.5px; color:var(--text-sub); margin-bottom:8px;">
+              <div style="display:flex; gap:8px; align-items:center; font-size:12.5px; color:var(--text-sub); margin-bottom:8px; flex-wrap:wrap;">
                 ${e.ipa_uk ? `<span>英 <code>${escapeHtml(e.ipa_uk)}</code></span>` : ''}
-                <button class="btn" style="height:24px; padding:0 8px; font-size:11.5px;" onclick="speakWord(${jsArg(e.lemma)}, 'uk')"> 英</button>
+                <button class="btn" style="height:24px; padding:0 8px; font-size:11.5px;" onclick="speakWord(${jsArg(e.lemma)}, 'uk')">英音</button>
                 ${e.ipa_us ? `<span>美 <code>${escapeHtml(e.ipa_us)}</code></span>` : ''}
-                <button class="btn" style="height:24px; padding:0 8px; font-size:11.5px;" onclick="speakWord(${jsArg(e.lemma)}, 'us')"> 美</button>
+                <button class="btn" style="height:24px; padding:0 8px; font-size:11.5px;" onclick="speakWord(${jsArg(e.lemma)}, 'us')">美音</button>
               </div>
               <div>${sensesHtml}</div>
+              <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+                <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="openWordInMain(${jsArg(e.lemma)})">在词典中打开</button>
+                <button class="btn" style="height:28px; padding:0 10px; font-size:12px;" onclick="navigator.clipboard.writeText(${jsArg(e.lemma)}); showToast('已复制单词');">复制</button>
+              </div>
             </div>
           `;
           return;
         }
+        if (data.suggestions && data.suggestions.length) {
+          const suggestions = data.suggestions.map(s =>
+            `<button class="btn" style="height:26px; padding:0 8px; font-size:12px;" onclick="quickTrayMiniWord(${jsArg(s)})">${escapeHtml(s)}</button>`
+          ).join(' ');
+          box.innerHTML = `<div style="padding:6px 0;"><div style="color:var(--text-sub); margin-bottom:6px;">未收录，你可能想查：</div><div style="display:flex; gap:6px; flex-wrap:wrap;">${suggestions}</div></div>`;
+          return;
+        }
       }
 
-      // Fallback or sentence: run local Hy-MT2 translation directly inside Mini Popover
+      box.innerHTML = `<div style="padding:14px; color:var(--text-sub);">正在翻译（本地运行）…</div>`;
       const tRes = await fetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1474,12 +1611,49 @@
       });
       const tData = await tRes.json();
       if (generation !== miniGeneration) return;
+      if (tData.status === 'ok') {
+        box.innerHTML = `
+          <div style="padding:10px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px;">
+            <div style="font-size:11.5px; color:var(--text-sub); margin-bottom:6px;">本地 Hy-MT2 翻译 · ${tData.elapsed_ms || 0} ms · ${escapeHtml(tData.target_lang || '')}</div>
+            <div style="font-size:14px; line-height:1.65; white-space:pre-wrap;">${escapeHtml(tData.translated_text || '')}</div>
+            <div style="display:flex; gap:8px; margin-top:10px;">
+              <button class="btn" style="height:26px; padding:0 8px; font-size:11.5px;" onclick="navigator.clipboard.writeText(${jsArg(tData.translated_text || '')}); showToast('已复制译文');">复制译文</button>
+              <button class="btn" style="height:26px; padding:0 8px; font-size:11.5px;" onclick="openInTranslatePage(${jsArg(q)})">在翻译页继续</button>
+            </div>
+          </div>
+        `;
+        return;
+      }
       box.innerHTML = `
         <div style="padding:10px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px;">
-          <div style="font-size:11.5px; color:var(--text-sub); margin-bottom:4px;">本地 Hy-MT2 即时翻译 (${tData.elapsed_ms || 0} ms)</div>
-          <div style="font-weight:600; font-size:14px;">${escapeHtml(tData.translated_text || tData.message || '')}</div>
+          <div style="font-size:12.5px; color:var(--text-sub); line-height:1.6;">${escapeHtml(tData.message || '本地翻译引擎暂不可用。')}</div>
+          <div style="display:flex; gap:8px; margin-top:10px;">
+            <button class="btn" style="height:26px; padding:0 8px; font-size:11.5px;" onclick="postToNativeShell({action:'showMainWindow', tab:'models'})">配置翻译引擎</button>
+            <button class="btn" style="height:26px; padding:0 8px; font-size:11.5px;" onclick="openInTranslatePage(${jsArg(q)})">打开翻译页</button>
+          </div>
         </div>
       `;
+    }
+
+    function openWordInMain(word) {
+      if (hasNativeShell()) {
+        postToNativeShell({ action: 'openWord', text: word });
+        return;
+      }
+      closeYoudaoMiniPopover();
+      quickSelectWord(word);
+    }
+
+    function openInTranslatePage(text) {
+      if (hasNativeShell()) {
+        postToNativeShell({ action: 'openTranslate', text });
+        closeYoudaoMiniPopover();
+        return;
+      }
+      const input = document.getElementById('transStudioInput');
+      if (input) input.value = text;
+      closeYoudaoMiniPopover();
+      switchPage('translate', document.getElementById('nav-translate'));
     }
 
     async function toggleTrayFeature(key) {
@@ -1493,10 +1667,27 @@
       postToNativeShell({
         action: 'syncState',
         screen_selection_enabled: trayState.screen_selection_enabled,
-        clipboard_capture_enabled: trayState.clipboard_capture_enabled
+        clipboard_capture_enabled: trayState.clipboard_capture_enabled,
+        clipboard_fallback_enabled: trayState.clipboard_fallback_enabled
       });
       const label = key === 'screen_selection_enabled' ? '屏幕划词取词' : '剪贴板自动查词';
       showToast(`${label}已${trayState[key] ? '开启' : '关闭'}`);
+    }
+
+    async function updateClipboardFallback(enabled) {
+      trayState.clipboard_fallback_enabled = enabled;
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clipboard_fallback_enabled: enabled })
+      });
+      postToNativeShell({
+        action: 'syncState',
+        screen_selection_enabled: trayState.screen_selection_enabled,
+        clipboard_capture_enabled: trayState.clipboard_capture_enabled,
+        clipboard_fallback_enabled: enabled
+      });
+      showToast(enabled ? '已开启受控复制回退（剪贴板会自动恢复）' : '已关闭复制回退');
     }
 
     window.syncTrayFlag = function(key, val) {
@@ -1554,9 +1745,11 @@
 
       const chkSel = document.getElementById('settingScreenSelection');
       const chkClip = document.getElementById('settingClipboardCapture');
+      const chkFallback = document.getElementById('settingClipboardFallback');
       const chkClose = document.getElementById('settingCloseToTray');
       if (chkSel) chkSel.checked = selOn;
       if (chkClip) chkClip.checked = clipOn;
+      if (chkFallback) chkFallback.checked = !!trayState.clipboard_fallback_enabled;
       if (chkClose) chkClose.checked = !!trayState.close_to_tray;
     }
 
@@ -1576,8 +1769,9 @@
 
       if (pageId === 'wordbook') loadWordbook();
       if (pageId === 'history') loadHistory();
-      if (pageId === 'models') { loadModels(); loadDictStats(); }
-      if (pageId === 'ocr') refreshNativeOcrAndAx();
+      if (pageId === 'models') { loadModels(); loadDictStats(); loadSystemSettings(); }
+      if (pageId === 'translate') { loadTranslationStatus(); }
+      if (pageId === 'ocr') { showOcrEmptyState(); }
     }
 
     function quickSelectWord(word) {
@@ -1728,31 +1922,42 @@
       const glossary = parseGlossaryInput();
       const requestId = crypto.randomUUID();
       currentTranslationReqId = requestId;
-
-      const res = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          request_id: requestId,
-          text,
-          source_lang,
-          target_lang,
-          preserve_format,
-          glossary
-        })
-      });
-      const data = await res.json();
       const out = document.getElementById('transStudioOutput');
-      if (currentTranslationReqId !== requestId || data.status === 'cancelled') return;
       const badge = document.getElementById('transAc10StatusBadge');
-
-      if (data.status !== 'ok') {
-        out.value = data.message;
-        badge.textContent = data.message || '翻译暂不可用';
+      if (!text.trim()) {
+        showToast('请先输入或粘贴要翻译的文本');
         return;
       }
-      out.value = data.translated_text || '';
-      badge.innerHTML = `翻译完成 · 耗时 ${data.elapsed_ms} ms · 已保留 ${data.protected_tokens_count} 处代码/链接格式`;
+      badge.textContent = '正在翻译（本地运行）…';
+
+      try {
+        const res = await fetch('/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            request_id: requestId,
+            text,
+            source_lang,
+            target_lang,
+            preserve_format,
+            glossary
+          })
+        });
+        const data = await res.json();
+        if (currentTranslationReqId !== requestId || data.status === 'cancelled') return;
+
+        if (data.status !== 'ok') {
+          out.value = data.message || '';
+          badge.textContent = data.message || '翻译暂不可用';
+          loadTranslationStatus();
+          return;
+        }
+        out.value = data.translated_text || '';
+        badge.innerHTML = `翻译完成 · 耗时 ${data.elapsed_ms} ms · 已保留 ${data.protected_tokens_count || 0} 处代码/链接格式 · ${escapeHtml(data.prompt_version || '')}`;
+      } catch (e) {
+        out.value = '';
+        badge.textContent = '翻译请求失败：' + e.message;
+      }
     }
 
     async function cancelStudioTranslation() {
@@ -1775,18 +1980,84 @@
       }
     }
 
-    async function refreshNativeOcrAndAx() {
-      document.getElementById('ocrAxSecurityCard').textContent = '当前仅提供原生能力诊断，尚未接入用户选区截图 OCR。';
-      document.getElementById('ocrRecognizedList').textContent = '区域截图 OCR 尚未实现。';
+    function showOcrEmptyState() {
+      const list = document.getElementById('ocrRecognizedList');
+      if (list && !list.dataset.filled) {
+        list.innerHTML = `
+          <div class="empty-state" style="padding:26px 12px; border:1px dashed var(--border); border-radius:10px;">
+            <div class="empty-symbol" aria-hidden="true">⌗</div>
+            <strong>还没有识别结果</strong>
+            <p style="color:var(--text-sub); margin-top:6px;">点击「框选截图识别」，拖拽选择屏幕区域；识别结果会显示在这里并可编辑。</p>
+          </div>`;
+      }
+    }
+
+    function startNativeOcr() {
+      if (!hasNativeShell()) {
+        showToast('截图识别仅在桌面版可用');
+        return;
+      }
+      document.getElementById('ocrStatusBadge').textContent = '截图中';
+      postToNativeShell({ action: 'captureOcr' });
+    }
+
+    function collectOcrLines() {
+      return Array.from(document.querySelectorAll('.ocr-line-input')).map(input => input.value);
+    }
+
+    function copyOcrText() {
+      const text = collectOcrLines().join('\n');
+      if (!text.trim()) { showToast('没有可复制的识别结果'); return; }
+      navigator.clipboard.writeText(text);
+      showToast('已复制识别文本');
     }
 
     function sendOcrLinesToTranslator() {
-      const inputs = document.querySelectorAll('.ocr-editable-line');
-      const lines = Array.from(inputs).map(i => i.value).join('\n');
-      document.getElementById('transStudioInput').value = lines;
+      const lines = collectOcrLines();
+      if (!lines.length || !lines.join('').trim()) {
+        showToast('请先截图识别文字');
+        return;
+      }
+      document.getElementById('transStudioInput').value = lines.join('\n');
       switchPage('translate', document.getElementById('nav-translate'));
       runStudioTranslation();
     }
+
+    window.receiveOcrResult = function (payload) {
+      const list = document.getElementById('ocrRecognizedList');
+      const badge = document.getElementById('ocrStatusBadge');
+      const status = document.getElementById('ocrStatusText');
+      const meta = document.getElementById('ocrAxSecurityCard');
+      if (!list) return;
+      list.dataset.filled = '1';
+      const lines = (payload && payload.lines) || [];
+      if (!payload || payload.status !== 'ok' || !lines.length) {
+        list.innerHTML = `
+          <div class="empty-state" style="padding:26px 12px; border:1px dashed var(--border); border-radius:10px;">
+            <div class="empty-symbol" aria-hidden="true">⌗</div>
+            <strong>${escapeHtml((payload && payload.message) || '未识别到文字')}</strong>
+            <p style="color:var(--text-sub); margin-top:6px;">可以换一块更清晰、更大的区域再试。</p>
+          </div>`;
+        badge.textContent = '未识别';
+        badge.className = 'tag';
+        status.textContent = (payload && payload.message) || '未识别到文字';
+        meta.textContent = '';
+        postToNativeShell({ action: 'ocrRendered', lines: 0 });
+        return;
+      }
+      latestOcrLines = lines.map(line => line.text);
+      list.innerHTML = lines.map((line, index) => `
+        <div style="display:flex; gap:10px; align-items:flex-start;">
+          <span class="tag" style="margin-top:8px; min-width:28px; text-align:center;">${index + 1}</span>
+          <textarea class="ocr-line-input" data-index="${index}" style="flex:1; min-height:42px; resize:vertical;">${escapeHtml(line.text)}</textarea>
+        </div>
+      `).join('');
+      badge.textContent = '识别完成';
+      badge.className = 'tag green';
+      status.textContent = `已识别 ${lines.length} 行 · ${payload.elapsed_ms || 0} ms · ${payload.language || '系统 OCR'}`;
+      meta.textContent = `选区 ${payload.width || '?'} × ${payload.height || '?'} 像素；图片仅在内存中处理，未写入磁盘。`;
+      postToNativeShell({ action: 'ocrRendered', lines: lines.length });
+    };
 
     async function loadWordbook(searchQuery = '') {
       const generation = ++wordbookGeneration;
@@ -1814,6 +2085,78 @@
           </td>
         </tr>
       `).join('');
+    }
+
+    async function startWordReview() {
+      const res = await fetch('/api/wordbook');
+      const data = await res.json();
+      const now = new Date().toISOString();
+      reviewQueue = (data.items || []).filter(item => !item.next_review_at || item.next_review_at <= now);
+      if (!reviewQueue.length) {
+        showToast('今天没有到期生词，稍后再来');
+        return;
+      }
+      reviewIndex = 0;
+      document.getElementById('reviewCard').style.display = 'block';
+      showReviewItem();
+      document.getElementById('reviewCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function showReviewItem() {
+      const item = reviewQueue[reviewIndex];
+      if (!item) { endWordReview(); return; }
+      document.getElementById('reviewWord').textContent = item.source_text;
+      document.getElementById('reviewMeaning').textContent = item.summary_snapshot || '（暂无释义快照）';
+      document.getElementById('reviewNote').textContent = item.note ? `备注：${item.note}` : '';
+      document.getElementById('reviewProgress').textContent = `${reviewIndex + 1} / ${reviewQueue.length} · Lv.${item.mastery_level || 1}`;
+    }
+
+    async function rateWordReview(rating) {
+      const item = reviewQueue[reviewIndex];
+      if (!item) { endWordReview(); return; }
+      await fetch('/api/wordbook/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source_text: item.source_text, rating })
+      });
+      reviewIndex += 1;
+      if (reviewIndex >= reviewQueue.length) {
+        showToast('本轮复习完成');
+        endWordReview();
+        loadWordbook();
+        return;
+      }
+      showReviewItem();
+      loadWordbook(document.getElementById('wordbookSearchInput')?.value || '');
+    }
+
+    function endWordReview() {
+      reviewQueue = [];
+      reviewIndex = 0;
+      const card = document.getElementById('reviewCard');
+      if (card) card.style.display = 'none';
+    }
+
+    async function importWordbookFile(input) {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      try {
+        const parsed = JSON.parse(await file.text());
+        const items = Array.isArray(parsed) ? parsed : (parsed.items || []);
+        if (!Array.isArray(items) || !items.length) throw new Error('文件中没有可导入的词条');
+        const res = await fetch('/api/wordbook/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entries: items })
+        });
+        const data = await res.json();
+        showToast(`已导入 ${data.imported_count || items.length} 条生词`);
+        loadWordbook();
+      } catch (e) {
+        showToast('导入失败：' + e.message);
+      } finally {
+        input.value = '';
+      }
     }
 
     async function markWordMastered(word) {
@@ -1935,29 +2278,76 @@
       const res = await fetch('/api/models');
       const data = await res.json();
       const box = document.getElementById('modelsListContainer');
-      const activeReady = data.models.find(m => m.is_active && m.status === 'ready');
-      document.getElementById('sidebarModelTag').innerText = activeReady ? activeReady.quant : '可用';
+      const activeReady = data.models.find(m => m.is_active && m.status === 'ready' && m.file_exists !== false);
+      document.getElementById('sidebarModelTag').innerText = activeReady ? activeReady.quant : '未安装';
 
       box.innerHTML = data.models.map(m => {
         const sizeGb = (m.size_bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
-        const isReady = m.status === 'ready';
+        const isReady = m.status === 'ready' && m.file_exists !== false;
+        const downloading = m.status === 'downloading';
+        const missingFile = m.status === 'ready' && m.file_exists === false;
         return `
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px;">
-            <div>
-              <strong>${escapeHtml(m.model_name)} (${escapeHtml(m.quant)})</strong>
-              ${m.is_active && isReady ? '<span class="tag green" style="margin-left:6px;">当前启用</span>' : ''}
-              <div style="font-size:12px; color:var(--text-sub); margin-top:2px;">文件大小: ${sizeGb} · 推荐内存: ${m.recommended_ram_gb} GB</div>
+          <div style="padding:12px 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+              <div>
+                <strong>${escapeHtml(m.model_name)} (${escapeHtml(m.quant)})</strong>
+                ${m.quant === 'Q4_K_M' ? '<span class="tag green" style="margin-left:6px;">推荐 · 最快</span>' : ''}
+                ${m.quant === 'Q6_K' ? '<span class="tag" style="margin-left:6px;">质量优先 · 较慢</span>' : ''}
+                ${m.quant === 'Q8_0' ? '<span class="tag" style="margin-left:6px;">最慢</span>' : ''}
+                ${m.is_active && isReady ? '<span class="tag green" style="margin-left:6px;">当前启用</span>' : ''}
+                ${missingFile ? '<span class="tag" style="margin-left:6px; color:var(--warning);">文件缺失</span>' : ''}
+                ${downloading ? '<span class="tag blue" style="margin-left:6px;">下载中</span>' : ''}
+                <div style="font-size:12px; color:var(--text-sub); margin-top:2px;">文件大小 ${sizeGb} · 推荐内存 ${m.recommended_ram_gb} GB · ${escapeHtml(m.license || 'Apache-2.0')}</div>
+                <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px; word-break:break-all;">${escapeHtml(m.file_path || '')}</div>
+              </div>
+              <div style="display:flex; gap:8px; flex-shrink:0;">
+                ${!isReady && !downloading
+                  ? `<button class="btn btn-primary" onclick="downloadModel(${jsArg(m.id)})">下载并启用</button>`
+                  : isReady
+                    ? `<button class="btn" onclick="updateModel(${jsArg(m.id)}, 'activate')">设为默认</button>
+                       <button class="btn btn-danger" onclick="updateModel(${jsArg(m.id)}, 'uninstall')">卸载</button>`
+                    : `<button class="btn" disabled>下载中…</button>`
+                }
+              </div>
             </div>
-            <div style="display:flex; gap:8px;">
-              ${!isReady
-                ? `<button class="btn btn-primary" onclick="updateModel(${jsArg(m.id)}, 'install_and_verify')">启用模型</button>`
-                : `<button class="btn" onclick="updateModel(${jsArg(m.id)}, 'activate')">设为默认</button>
-                   <button class="btn btn-danger" onclick="updateModel(${jsArg(m.id)}, 'uninstall')">卸载</button>`
-              }
-            </div>
+            ${downloading ? `<div style="margin-top:10px;"><div style="height:6px; background:var(--border); border-radius:3px; overflow:hidden;"><div id="modelProgress-${escapeHtml(m.id)}" style="height:100%; width:0; background:var(--primary); transition:width .3s;"></div></div><div id="modelProgressText-${escapeHtml(m.id)}" style="font-size:11.5px; color:var(--text-sub); margin-top:4px;">准备下载…</div></div>` : ''}
           </div>
         `;
       }).join('');
+    }
+
+    async function downloadModel(modelId) {
+      const response = await fetch('/api/models/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model_id: modelId })
+      });
+      const data = await response.json();
+      if (!response.ok || data.status === 'error') {
+        showToast(data.message || '无法开始下载');
+        return;
+      }
+      showToast('已开始下载模型（支持断点续传）');
+      await loadModels();
+      pollModelDownload(modelId);
+    }
+
+    async function pollModelDownload(modelId) {
+      for (let attempt = 0; attempt < 3600; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 900));
+        try {
+          const res = await fetch('/api/models/download/status?model_id=' + encodeURIComponent(modelId));
+          const data = await res.json();
+          const bar = document.getElementById('modelProgress-' + modelId);
+          const text = document.getElementById('modelProgressText-' + modelId);
+          if (bar) bar.style.width = Math.max(0, Math.min(100, data.percent || 0)) + '%';
+          if (text) text.textContent = data.message || `已下载 ${data.percent || 0}%`;
+          if (data.status === 'ready') { showToast('模型下载并校验完成，已启用'); await loadModels(); loadTranslationStatus(); return; }
+          if (data.status === 'error') { showToast(data.message || '模型下载失败'); await loadModels(); return; }
+        } catch (e) {
+          // transient network error while the backend restarts; keep polling
+        }
+      }
     }
 
     async function updateModel(modelId, action) {
@@ -1975,6 +2365,87 @@
       showToast('模型状态已更新');
     }
 
+    async function loadTranslationStatus() {
+      const badge = document.getElementById('translateEngineBadge');
+      const text = document.getElementById('translateEngineText');
+      const detail = document.getElementById('translationEngineStatus');
+      try {
+        const res = await fetch('/api/translate/status');
+        const data = await res.json();
+        if (badge) {
+          badge.textContent = data.ready ? (data.loaded ? '模型已加载' : '可翻译') : '未配置';
+          badge.className = data.ready ? 'tag green' : 'tag';
+        }
+        if (text) text.textContent = data.ready ? (data.message || '本地翻译引擎已就绪，断网可用。') : (data.message || '尚未配置本地翻译引擎，词典功能不受影响。');
+        if (detail) {
+          detail.textContent = data.ready
+            ? `已就绪 · ${data.provider || ''} ${data.model || ''} ${data.endpoint ? '· ' + data.endpoint : ''}${data.loaded ? ' · 模型已常驻内存' : ' · 首次翻译需加载模型'}`
+            : (data.message || '');
+        }
+        const preload = document.getElementById('preloadModelBtn');
+        if (preload && data.ready) {
+          preload.disabled = !!data.loaded;
+          preload.textContent = data.loaded ? '模型已加载' : '预加载模型';
+        }
+      } catch (e) {
+        if (badge) { badge.textContent = '检测失败'; badge.className = 'tag'; }
+      }
+    }
+
+    async function preloadTranslation() {
+      const button = document.getElementById('preloadModelBtn');
+      const detail = document.getElementById('translationEngineStatus');
+      const badge = document.getElementById('translateEngineBadge');
+      if (button) { button.disabled = true; button.textContent = '加载中…'; }
+      if (detail) detail.textContent = '正在加载本地模型（首次约 5–15 秒）…';
+      if (badge) { badge.textContent = '加载中'; badge.className = 'tag blue'; }
+      try {
+        const res = await fetch('/api/translate/preload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const data = await res.json();
+        showToast(data.loaded ? '本地模型已加载，可以开始翻译' : (data.message || '模型加载失败'));
+      } catch (e) {
+        showToast('模型加载失败：' + e.message);
+      } finally {
+        await loadTranslationStatus();
+      }
+    }
+
+    async function testTranslationEngine() {
+      const detail = document.getElementById('translationEngineStatus');
+      if (detail) detail.textContent = '正在测试…';
+      const config = {
+        translation_provider: document.getElementById('translationProvider').value,
+        translation_endpoint: document.getElementById('translationEndpoint').value.trim(),
+        translation_model: document.getElementById('translationModel').value.trim(),
+        translation_api_key: document.getElementById('translationApiKey').value
+      };
+      try {
+        const res = await fetch('/api/translate/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config)
+        });
+        const data = await res.json();
+        if (detail) detail.textContent = (data.ready ? '✓ ' : '✗ ') + (data.message || '');
+        showToast(data.ready ? '翻译引擎连接成功' : '翻译引擎不可用');
+        loadTranslationStatus();
+      } catch (e) {
+        if (detail) detail.textContent = '测试失败：' + e.message;
+      }
+    }
+
+    function isMacPlatform() {
+      return /Mac|iPhone|iPad/.test(navigator.platform || '') || /Mac OS X/.test(navigator.userAgent || '');
+    }
+
+    function currentHotkeys() {
+      return {
+        lookup: document.getElementById('hotkeyLookupInput')?.value.trim() || '',
+        ocr: document.getElementById('hotkeyOcrInput')?.value.trim() || '',
+        main: document.getElementById('hotkeyMainInput')?.value.trim() || ''
+      };
+    }
+
     async function loadSystemSettings() {
       try {
         const res = await fetch('/api/settings');
@@ -1983,24 +2454,58 @@
         if (typeof s.close_to_tray === 'boolean') trayState.close_to_tray = s.close_to_tray;
         if (typeof s.screen_selection_enabled === 'boolean') trayState.screen_selection_enabled = s.screen_selection_enabled;
         if (typeof s.clipboard_capture_enabled === 'boolean') trayState.clipboard_capture_enabled = s.clipboard_capture_enabled;
-        if (s.hotkey_lookup_mac) document.getElementById('hotkeyLookupInput').value = s.hotkey_lookup_mac;
-        if (s.hotkey_ocr_mac) document.getElementById('hotkeyOcrInput').value = s.hotkey_ocr_mac;
+        if (typeof s.clipboard_fallback_enabled === 'boolean') trayState.clipboard_fallback_enabled = s.clipboard_fallback_enabled;
+        const mac = isMacPlatform();
+        const lookup = mac ? (s.hotkey_lookup_mac || 'Option+Command+T') : (s.hotkey_lookup_win || 'Ctrl+Alt+T');
+        const ocr = mac ? (s.hotkey_ocr_mac || 'Option+Command+S') : (s.hotkey_ocr_win || 'Ctrl+Alt+S');
+        const main = mac ? (s.hotkey_main_mac || 'Option+Command+D') : (s.hotkey_main_win || 'Ctrl+Alt+D');
+        if (document.getElementById('hotkeyLookupInput')) {
+          document.getElementById('hotkeyLookupInput').value = lookup;
+          document.getElementById('hotkeyLookupInput').dataset.win = s.hotkey_lookup_win || 'Ctrl+Alt+T';
+          document.getElementById('hotkeyLookupInput').dataset.mac = s.hotkey_lookup_mac || 'Option+Command+T';
+        }
+        if (document.getElementById('hotkeyOcrInput')) {
+          document.getElementById('hotkeyOcrInput').value = ocr;
+          document.getElementById('hotkeyOcrInput').dataset.win = s.hotkey_ocr_win || 'Ctrl+Alt+S';
+          document.getElementById('hotkeyOcrInput').dataset.mac = s.hotkey_ocr_mac || 'Option+Command+S';
+        }
+        if (document.getElementById('hotkeyMainInput')) {
+          document.getElementById('hotkeyMainInput').value = main;
+          document.getElementById('hotkeyMainInput').dataset.win = s.hotkey_main_win || 'Ctrl+Alt+D';
+          document.getElementById('hotkeyMainInput').dataset.mac = s.hotkey_main_mac || 'Option+Command+D';
+        }
+        if (document.getElementById('translationProvider')) document.getElementById('translationProvider').value = s.translation_provider || 'auto';
+        if (document.getElementById('translationEndpoint')) document.getElementById('translationEndpoint').value = s.translation_endpoint || '';
+        if (document.getElementById('translationModel')) document.getElementById('translationModel').value = s.translation_model || '';
+        if (document.getElementById('translationApiKey')) document.getElementById('translationApiKey').value = s.translation_api_key || '';
         if (s.tray_click_action) {
           trayState.tray_click_action = s.tray_click_action;
           document.getElementById('settingTrayClickAction').value = s.tray_click_action;
         }
         syncTrayUI();
-        postToNativeShell({action: 'setCloseToTray', enabled: trayState.close_to_tray});
-        postToNativeShell({action: 'syncState', ...trayState});
+        postToNativeShell({ action: 'setCloseToTray', enabled: trayState.close_to_tray });
+        postToNativeShell({ action: 'syncState', ...trayState });
+        postToNativeShell({ action: 'updateHotkeys', hotkey_lookup_win: s.hotkey_lookup_win || 'Ctrl+Alt+T', hotkey_ocr_win: s.hotkey_ocr_win || 'Ctrl+Alt+S', hotkey_main_win: s.hotkey_main_win || 'Ctrl+Alt+D', hotkey_lookup_mac: s.hotkey_lookup_mac || 'Option+Command+T', hotkey_ocr_mac: s.hotkey_ocr_mac || 'Option+Command+S', hotkey_main_mac: s.hotkey_main_mac || 'Option+Command+D' });
       } catch (e) {}
     }
 
     async function saveSystemSettings() {
+      const hotkeys = currentHotkeys();
+      const mac = isMacPlatform();
       const payload = {
-        hotkey_lookup_mac: document.getElementById('hotkeyLookupInput').value,
-        hotkey_ocr_mac: document.getElementById('hotkeyOcrInput').value,
+        hotkey_lookup_win: mac ? (document.getElementById('hotkeyLookupInput').dataset.win || 'Ctrl+Alt+T') : hotkeys.lookup,
+        hotkey_ocr_win: mac ? (document.getElementById('hotkeyOcrInput').dataset.win || 'Ctrl+Alt+S') : hotkeys.ocr,
+        hotkey_main_win: mac ? (document.getElementById('hotkeyMainInput').dataset.win || 'Ctrl+Alt+D') : hotkeys.main,
+        hotkey_lookup_mac: mac ? hotkeys.lookup : undefined,
+        hotkey_ocr_mac: mac ? hotkeys.ocr : undefined,
+        hotkey_main_mac: mac ? hotkeys.main : undefined,
         close_to_tray: document.getElementById('settingCloseToTray').checked,
-        tray_click_action: document.getElementById('settingTrayClickAction').value
+        tray_click_action: document.getElementById('settingTrayClickAction').value,
+        clipboard_fallback_enabled: document.getElementById('settingClipboardFallback').checked,
+        translation_provider: document.getElementById('translationProvider').value,
+        translation_endpoint: document.getElementById('translationEndpoint').value.trim(),
+        translation_model: document.getElementById('translationModel').value.trim(),
+        translation_api_key: document.getElementById('translationApiKey').value
       };
       const res = await fetch('/api/settings', {
         method: 'POST',
@@ -2012,8 +2517,18 @@
         showToast(data.message);
         return;
       }
-      showToast('设置已保存');
+      postToNativeShell({
+        action: 'updateHotkeys',
+        hotkey_lookup_win: payload.hotkey_lookup_win,
+        hotkey_ocr_win: payload.hotkey_ocr_win,
+        hotkey_main_win: payload.hotkey_main_win,
+        hotkey_lookup_mac: mac ? hotkeys.lookup : (document.getElementById('hotkeyLookupInput').dataset.mac || 'Option+Command+T'),
+        hotkey_ocr_mac: mac ? hotkeys.ocr : (document.getElementById('hotkeyOcrInput').dataset.mac || 'Option+Command+S'),
+        hotkey_main_mac: mac ? hotkeys.main : (document.getElementById('hotkeyMainInput').dataset.mac || 'Option+Command+D')
+      });
+      showToast('设置已保存，快捷键已生效');
       await loadSystemSettings();
+      loadTranslationStatus();
     }
 
     function toggleQuickPillOverlay() {
@@ -2036,6 +2551,8 @@
     loadWordbook();
     loadDictStats();
     loadSystemSettings();
+    loadTranslationStatus();
+    showOcrEmptyState();
   </script>
 </body>
 </html>

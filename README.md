@@ -1,69 +1,105 @@
-> **1.0.1 修复说明：** 当前安装包采用 Swift / WebView2 + Python 后端。已修复原生页面切换循环等稳定性问题；以下 v1.0 功能描述中，真实 AI 推理、模型下载、截图 OCR、系统划词尚未完整实现。详见 [代码检查与修复记录](docs/BUG_REVIEW_1.0.1.md)。新构建入口为 `.github/workflows/build-installers.yml`，本地构建使用 `python scripts/build_installers.py --platform windows` 或在 Mac 上使用 `--platform macos --arch arm64`（Intel 使用 `--arch x64`）。
+> **1.0.4 更新：** 修复从托盘恢复时迷你弹窗在 125%/150%/200% DPI 下越界、以及双击托盘被单击逻辑抢占的问题；同时优化 Hy-MT2 推理参数（物理核心、Flash Attention、mlock、单槽）并新增「预加载模型」，Q6_K 短句翻译由约 2.2s 降至约 0.6s（Q4_K_M 约 0.4s）。Windows/macOS 的全局划词、剪贴板取词、全局热键、区域截图 OCR 与真实 Hy-MT2 推理均已接入；Windows 1.0.4 安装包已在本机构建、安装并运行 `--self-test` 验证，macOS 同构 Swift 实现需在 macOS 构建机/真机完成编译与权限实测。签名与公证仍未完成。
 
 <p align="center">
   <img src="public/assets/logo.svg" width="96" height="96" alt="AI Dictionary Logo" />
 </p>
 
-<h1 align="center">AI Dictionary v1.0</h1>
+<h1 align="center">AI Dictionary v1.0.4</h1>
 
 <p align="center">
-  <strong>Windows / macOS 双平台本地离线 AI 词典与翻译桌面端（基于 Tencent Hy-MT2 + SQLite FTS5）</strong>
+  <strong>Windows / macOS 双平台本地离线 AI 词典与翻译桌面端（Hy-MT2 + llama.cpp + SQLite FTS5）</strong>
 </p>
 
 ---
 
-## 核心特性
+## 1.0.4 完成度
 
-1. **内置 14,625 条公开中英词库（开箱即用，`< 1ms` 极速查词）**：
-   - 默认集成初中、高中、四级 (`CET-4`)、六级 (`CET-6`)、考研、托福 (`TOEFL`)、SAT、`WordNet 3.0`、`CC-CEDICT` 与 `Tatoeba` 双语例句。
-   - 持久只读 SQLite `mmap` 映射 + 进程内 `@lru_cache(maxsize=2048)` 热缓存（冷查均值 `2.21ms`，热缓存均值 `0.00076ms`）。
-   - 支持英汉互查、词形变化自动还原（如 `Running -> run`）、英美双音标与系统离线 TTS 发音。
-2. **有道词典式「系统信息栏 / 托盘常驻 + 关闭主窗口不退出」**：
-   - **macOS**：顶部菜单栏 (`NSStatusItem`) 常驻图标 + 左键弹出 `NSPopover` 迷你查词弹窗 + 右键快捷菜单；点击左上角红灯 `×` 仅隐藏主窗口 (`windowShouldClose -> orderOut`)，后台常驻不退出。
-   - **Windows**：右下角任务栏托盘 (`NotifyIcon`) 常驻图标 + 左键置顶迷你查词小窗 + 双击恢复主窗口 + 右键上下文菜单；点击右上角 `×` 自动最小化至系统托盘并弹出气泡提示。
-3. **Tencent Hy-MT2 本地离线 AI 翻译**：
-   - 支持中英互译、自定义术语表强约束 (`F-015`)、Markdown/代码/`{变量}`/URL 结构保护 (`AC-10`) 与新请求抢占取消 (`AC-02`)。
-4. **原生内存级截图 OCR 与密码框安全守卫**：
-   - 基于 macOS `Vision.framework` / Windows `Media.Ocr` 内存直接识别中英混排文本，零临时图片落盘 (`persistedToDisk = false`)。
-   - 自动检测 `AXSecureTextField` / `IsSecureEventInputEnabled()`，在密码框内严禁取词或触发剪贴板回退 (`AC-03`)。
-5. **生词本、艾宾浩斯复习与私密模式**：
-   - 词库文件 (`dictionary.db`) 与用户个人数据 (`user_data.db`) 物理隔离，升级应用绝不覆盖用户生词本。
-   - 支持 CSV / JSON 导入导出、备注编辑及一键私密无痕模式 (`AC-07`)。
+| 能力 | Windows | macOS | 说明 |
+|---|---|---|---|
+| 离线查词 / 词形还原 / 中英反查 / 建议 | 可用 | 可用 | 14,625 条词条，SQLite FTS5 + mmap + LRU |
+| 生词本 / 历史 / 私密模式 / CSV / JSON | 可用 | 可用 | 词典库与用户库物理隔离 |
+| 全局划词（UIA / AX + 复制回退） | 可用，已自测 | 已实现，待 macOS 实测 | 密码框/安全输入状态直接拒绝 |
+| 剪贴板取词（自动弹窗） | 可用，已自测 | 已实现，待 macOS 实测 | 启用时不会弹出旧剪贴板内容 |
+| 全局热键 | 可用，已自测注册 | Carbon 实现，待实测 | 默认 `Ctrl+Alt+T/S/D`、`Option+Command+T/S/D` |
+| 区域截图 OCR | 可用，已自测 | Vision 实现，待实测 | 内存处理，不写临时图片 |
+| Hy-MT2 本地翻译 | 可用，已用真实模型验证 | 已接入 llama-server，待实测 | 需下载约 1.1 GB 模型；llama.cpp 随包 |
+| OpenAI 兼容本地服务 | 可用，已用 mock 验证 | 可用 | 支持 Ollama / LM Studio / vLLM 等 |
+| 模型下载 / 断点续传 / SHA256 / 原子替换 | 可用，已用 mock 验证 | 同左 | 模型不内置，首次使用需联网下载 |
+| 签名 / 公证 | 未签名 | ad-hoc，未公证 | 公开发布前仍需证书与 notarization |
 
----
-
-## 安装包清单 (`dist/installers/`)
-
-| 平台与架构 | 安装包文件 | 大小 | 说明 |
-| :--- | :--- | :--- | :--- |
-| **macOS Apple Silicon (`arm64`)** | `dist/installers/AI-Dictionary-1.0.0-macOS-arm64.dmg` | `5.08 MB` | 原生 M1/M2/M3/M4 磁盘映像 |
-| **macOS Intel (`x86_64`)** | `dist/installers/AI-Dictionary-1.0.0-macOS-x64.dmg` | `5.08 MB` | 原生 Intel Mac 磁盘映像 |
-| **macOS Universal (`arm64 + x86_64`)** | `dist/installers/AI-Dictionary-1.0.0-macOS-Universal.pkg` | `4.61 MB` | 双架构通用向导安装包 |
-| **Windows 10/11 (`x64`)** | `dist/installers/AI-Dictionary-1.0.0-Windows-x64-Setup.zip` | `3.59 MB` | 含一键安装脚本、右下角托盘常驻程序与卸载脚本 |
+> 没有模型时词典、划词、OCR 全部可用；翻译会明确提示先下载模型或配置本地服务，不会伪造译文。
 
 ---
 
-## 快速开发与构建指令
+## 安装包
+
+构建产物位于 `dist/installers/`（1.0.4）：
+
+| 平台 | 文件 |
+|---|---|
+| Windows 10/11 x64 | `AI-Dictionary-1.0.4-Windows-x64-Setup.exe`（NSIS，含 WebView2 检测、llama.cpp CPU 运行时） |
+| Windows 便携包 | `AI-Dictionary-1.0.4-Windows-x64-Setup.zip` |
+| macOS Apple Silicon | `AI-Dictionary-1.0.4-macOS-arm64.dmg` / `.pkg` |
+| macOS Intel | `AI-Dictionary-1.0.4-macOS-x64.dmg` / `.pkg` |
+
+用户数据：macOS `~/Library/Application Support/AIDictionary/`；Windows `%LOCALAPPDATA%\AIDictionary\`。升级/卸载不会主动删除。
+
+---
+
+## 快速开发与验证
 
 ```bash
-# 1. 重新构建 14,625 词条 SQLite FTS5 离线词库
+# 1. 重建词典库（可选）
 python3 scripts/etl_dictionary.py
 
-# 2. 启动本地服务与 Web 预览 (http://127.0.0.1:1420)
+# 2. 启动本地服务与浏览器预览
 python3 scripts/run_local_server.py --port 1420
 
-# 3. 运行全量自动化验收测试套件 (AC-01~10 & F-001~018)
+# 3. 后端 + 浏览器回归测试
+python3 scripts/test_regressions.py
+python3 scripts/test_desktop_ui.py
+
+# 4. 自动化验收（平台相关的原生项按平台 SKIP/执行）
 python3 scripts/verify_acceptance.py
 
-# 4. 一键编译 macOS (arm64 / x64 / Universal) 与 Windows (x64) 安装包
-python3 scripts/build_installers.py
+# 5. 构建 Windows 安装包（需要 Python/PyInstaller；llama.cpp 运行时自动下载）
+python3 scripts/build_installers.py --platform windows
+python3 scripts/build_windows_exe.py \
+  --makensis dist/build-tools/nsis/nsis-3.08/Bin/makensis.exe \
+  --bootstrapper dist/build-tools/MicrosoftEdgeWebview2Setup.exe
+
+# 6. 构建 macOS 安装包（需在 macOS + Xcode CLT 上执行）
+python3 scripts/build_installers.py --platform macos --arch arm64
 ```
+
+Windows 原生自测（会真实启动 WebView2、模拟划词、剪贴板取词、密码框拦截与截图 OCR）：
+
+```powershell
+powershell.exe -NoProfile -STA -ExecutionPolicy Bypass `
+  -File "$env:LOCALAPPDATA\Programs\AI Dictionary\app\scripts\windows_tray_shell.ps1" --self-test
+```
+
+自测结果写入 `%TEMP%\aidict-selftest-result.txt`，通过时包含
+`PASS selection=...; clipboard(watcher) matched=True; secure=blocked_secure_input; ocrStatus=ok; ocrRendered=1`。
+
+---
+
+## 数据与运行时
+
+- `data/dictionary.db`：14,625 条公开词条、41,916 条词形映射、FTS5 索引。
+- `data/user_data.db`：生词本、历史、模型登记、设置。
+- 词库来源：公开应试词表（BSD-3-Clause）、少量 WordNet/ECDICT 标注词条、CC-CEDICT 词条；许可证与来源见 [docs/DATA_LICENSE_LEDGER.md](docs/DATA_LICENSE_LEDGER.md)。
+- Hy-MT2 GGUF 模型不随安装包分发；首次在「本地翻译模型」下载，校验 SHA256 后原子替换。
+- llama.cpp 运行时来自官方 release `b12340`，按平台打包；Windows 为 CPU x64，macOS 为 arm64/x64。
 
 ---
 
 ## 文档索引
 
-- [产品需求文档 (AI_Dictionary_PRD_v1.0.md)](./AI_Dictionary_PRD_v1.0.md)
-- [技术架构与开发计划 (docs/TECHNICAL_ARCHITECTURE_AND_PLAN.md)](./docs/TECHNICAL_ARCHITECTURE_AND_PLAN.md)
-- [开源数据与模型许可证台账 (docs/DATA_LICENSE_LEDGER.md)](./docs/DATA_LICENSE_LEDGER.md)
-- [性能基准与全量验收测试报告 (docs/BENCHMARK_REPORT.md)](./docs/BENCHMARK_REPORT.md)
+- [产品需求文档 (AI_Dictionary_PRD_v1.0.md)](AI_Dictionary_PRD_v1.0.md)
+- [1.0.4 构建与验证记录](docs/RELEASE_1.0.4.md)
+- [数据与模型许可证台账](docs/DATA_LICENSE_LEDGER.md)
+- [1.0.1 代码检查与修复记录](docs/BUG_REVIEW_1.0.1.md)
+- [1.0.2 Windows 界面/DPI 修复记录](docs/UI_REVIEW_1.0.2.md)
+
+> 当前实际发行架构为 Python 后端 + 单页前端 + 原生壳（Swift/AppKit + WKWebView、PowerShell + WinForms + WebView2）。PRD 中的 Tauri 2 + React + Rust 是早期目标技术基线，该原型目录已从仓库移除。

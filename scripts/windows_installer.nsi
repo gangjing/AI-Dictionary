@@ -2,17 +2,17 @@
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
 !include "x64.nsh"
-Name "AI Dictionary 1.0.2"
+Name "AI Dictionary 1.0.4"
 OutFile "${OUTPUT}"
 InstallDir "$LOCALAPPDATA\Programs\AI Dictionary"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
 Icon "${PAYLOAD}\app\icon.ico"
 UninstallIcon "${PAYLOAD}\app\icon.ico"
-VIProductVersion "1.0.2.0"
+VIProductVersion "1.0.4.0"
 VIAddVersionKey "ProductName" "AI Dictionary"
 VIAddVersionKey "FileDescription" "AI Dictionary Setup"
-VIAddVersionKey "FileVersion" "1.0.2"
+VIAddVersionKey "FileVersion" "1.0.4"
 VIAddVersionKey "LegalCopyright" "AI Dictionary"
 !define MUI_ABORTWARNING
 !insertmacro MUI_PAGE_WELCOME
@@ -77,7 +77,7 @@ Section "Install"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   CreateShortcut "$SMPROGRAMS\AI Dictionary.lnk" "$INSTDIR\AI Dictionary.exe" "" "$INSTDIR\app\icon.ico"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AIDictionary" "DisplayName" "AI Dictionary"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AIDictionary" "DisplayVersion" "1.0.2"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AIDictionary" "DisplayVersion" "1.0.4"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AIDictionary" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AIDictionary" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\AIDictionary" "DisplayIcon" "$INSTDIR\AI Dictionary.exe"

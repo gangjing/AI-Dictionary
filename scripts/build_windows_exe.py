@@ -22,7 +22,7 @@ def main():
     subprocess.run([sys.executable, str(ROOT / 'scripts/build_installers.py'), '--platform', 'windows'], check=True)
     csc = Path(os.environ['WINDIR']) / 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
     subprocess.run([str(csc), '/nologo', '/target:winexe', '/platform:x64',
-                    '/reference:System.Windows.Forms.dll', '/win32icon:' + str(ROOT / 'src-tauri/icons/icon.ico'),
+                    '/reference:System.Windows.Forms.dll', '/win32icon:' + str(ROOT / 'assets/icons/icon.ico'),
                     '/out:' + str(PAYLOAD / 'AI Dictionary.exe'), str(ROOT / 'scripts/windows_launcher.cs')], check=True)
     lines = []
     for item in sorted((PAYLOAD / 'app').rglob('*')):
@@ -36,7 +36,7 @@ def main():
         lines.append(f'RMDir "$INSTDIR\\{item.relative_to(PAYLOAD)}"')
     manifest = PAYLOAD / 'uninstall-manifest.nsh'
     manifest.write_text('\n'.join(lines), encoding='utf-8-sig')
-    output = DIST / 'installers/AI-Dictionary-1.0.2-Windows-x64-Setup.exe'
+    output = DIST / 'installers/AI-Dictionary-1.0.4-Windows-x64-Setup.exe'
     subprocess.run([str(args.makensis.resolve()), '/V3', '/DPAYLOAD=' + str(PAYLOAD),
                     '/DOUTPUT=' + str(output), '/DBOOTSTRAPPER=' + str(args.bootstrapper.resolve()),
                     '/DUNINSTALL_MANIFEST=' + str(manifest), str(ROOT / 'scripts/windows_installer.nsi')], check=True)
