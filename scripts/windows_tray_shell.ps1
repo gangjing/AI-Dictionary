@@ -8,6 +8,8 @@
 $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
+Add-Type -Path (Join-Path $PSScriptRoot 'windows_appearance.cs') -ReferencedAssemblies System.Windows.Forms,System.Drawing
+[DesktopAppearance]::EnableDpi()
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -17,7 +19,7 @@ if (-not (Test-Path $IconPath)) {
     $IconPath = Join-Path $AppRoot "src-tauri\icons\icon.ico"
 }
 
-$Port = 14205
+$Port = if ($env:AIDICT_PORT) { [int]$env:AIDICT_PORT } else { 14205 }
 $MainUrl = "http://127.0.0.1:$Port/"
 $TrayUrl = "http://127.0.0.1:$Port/?mode=tray"
 
@@ -58,6 +60,7 @@ function New-AppBrowser($Url) {
         param($sender, $eventArgs)
         $Message = $eventArgs.WebMessageAsJson | ConvertFrom-Json
         switch ($Message.action) {
+            'setTheme' { Set-AppTheme ([bool]$Message.dark) }
             'hideToTray' { $MainForm.Hide() }
             'showMainWindow' {
                 Show-MainWindow
@@ -93,10 +96,10 @@ if (Test-Path $IconPath) {
 }
 
 # 1. Create Main Window with Close-to-Tray Interception
-$MainForm = New-Object System.Windows.Forms.Form
-$MainForm.Text = "AI Dictionary — 本地离线词典与翻译 (关闭窗口将最小化至右下角系统托盘)"
-$MainForm.Size = New-Object System.Drawing.Size(1120, 750)
-$MainForm.MinimumSize = New-Object System.Drawing.Size(860, 560)
+$MainForm = New-Object DictionaryWindow
+$MainForm.Text = "AI Dictionary"
+$MainForm.LogicalSize = New-Object System.Drawing.Size(1120, 750)
+$MainForm.LogicalMinimum = New-Object System.Drawing.Size(800, 520)
 $MainForm.StartPosition = "CenterScreen"
 $MainForm.Icon = $AppIcon
 
@@ -104,9 +107,10 @@ $MainBrowser = New-AppBrowser $MainUrl
 $MainForm.Controls.Add($MainBrowser)
 
 # 2. Create Youdao-style Tray Mini Lookup Popover Window (anchored near taskbar notification area)
-$MiniForm = New-Object System.Windows.Forms.Form
+$MiniForm = New-Object DictionaryWindow
 $MiniForm.Text = "AI 词典 — 迷你查词栏"
-$MiniForm.Size = New-Object System.Drawing.Size(395, 510)
+$MiniForm.LogicalSize = New-Object System.Drawing.Size(390, 500)
+$MiniForm.LogicalMinimum = New-Object System.Drawing.Size(320, 350)
 $MiniForm.FormBorderStyle = "FixedToolWindow"
 $MiniForm.TopMost = $true
 $MiniForm.ShowInTaskbar = $false
@@ -135,30 +139,60 @@ $NotifyIcon.Visible = $true
 
 $TrayMenu = New-Object System.Windows.Forms.ContextMenuStrip
 
-$ItemMini = $TrayMenu.Items.Add("🔍 打开迷你查词小窗 (Mini 查词栏)")
-$ItemMain = $TrayMenu.Items.Add("📖 显示 AI 词典主窗口")
+$ItemMini = $TrayMenu.Items.Add("迷你查词")
+$ItemMain = $TrayMenu.Items.Add("打开主窗口")
 $TrayMenu.Items.Add("-") | Out-Null
 
-$ItemSelection = New-Object System.Windows.Forms.ToolStripMenuItem("屏幕划词翻译 (Screen Capture)")
+$ItemSelection = New-Object System.Windows.Forms.ToolStripMenuItem("划词取词（开发中）")
 $ItemSelection.Checked = $script:SelectionOn
 $TrayMenu.Items.Add($ItemSelection) | Out-Null
 
-$ItemClipboard = New-Object System.Windows.Forms.ToolStripMenuItem("剪贴板自动查词 (Clipboard Monitor)")
+$ItemClipboard = New-Object System.Windows.Forms.ToolStripMenuItem("剪贴板取词（开发中）")
 $ItemClipboard.Checked = $script:ClipboardOn
 $TrayMenu.Items.Add($ItemClipboard) | Out-Null
 
-$ItemOcr = $TrayMenu.Items.Add("📸 区域截图 OCR 翻译")
+$ItemOcr = $TrayMenu.Items.Add("截图识别（开发中）")
 
-$ItemPrivacy = New-Object System.Windows.Forms.ToolStripMenuItem("🛡️ 私密无痕查词模式")
+$ItemPrivacy = New-Object System.Windows.Forms.ToolStripMenuItem("私密模式")
 $ItemPrivacy.Checked = $script:PrivacyOn
 $TrayMenu.Items.Add($ItemPrivacy) | Out-Null
 
 $TrayMenu.Items.Add("-") | Out-Null
-$ItemSettings = $TrayMenu.Items.Add("⚙️ 偏好设置与词库管理...")
+$ItemSettings = $TrayMenu.Items.Add("设置")
 $TrayMenu.Items.Add("-") | Out-Null
-$ItemExit = $TrayMenu.Items.Add("🚪 完全退出 AI 词典 (Exit)")
+$ItemExit = $TrayMenu.Items.Add("退出 AI Dictionary")
 
 $NotifyIcon.ContextMenuStrip = $TrayMenu
+$TrayMenu.Font = New-Object Drawing.Font("Microsoft YaHei UI", 9)
+$ItemSelection.Enabled = $false
+$ItemClipboard.Enabled = $false
+$ItemOcr.Enabled = $false
+
+function Set-AppTheme([bool]$Dark) {
+    $script:DarkTheme = $Dark
+    @{ dark = $Dark } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $UserDir 'appearance.json')
+    [DesktopAppearance]::Theme($MainForm, $Dark)
+    [DesktopAppearance]::Theme($MiniForm, $Dark)
+    $TrayMenu.Renderer = New-Object System.Windows.Forms.ToolStripProfessionalRenderer((New-Object DictionaryMenuColors($Dark)))
+    $TrayMenu.ForeColor = if ($Dark) { [Drawing.Color]::FromArgb(239,242,246) } else { [Drawing.Color]::FromArgb(29,34,39) }
+    $TrayMenu.BackColor = if ($Dark) { [Drawing.Color]::FromArgb(31,35,41) } else { [Drawing.Color]::White }
+    if ($env:AIDICT_NATIVE_METRICS) {
+        $titleDark = 0
+        $null = [DesktopAppearance]::DwmGetWindowAttribute($MainForm.Handle, 20, [ref]$titleDark, 4)
+        @{ dpi = [DesktopAppearance]::GetDpiForWindow($MainForm.Handle); perMonitorV2 = [DesktopAppearance]::AreDpiAwarenessContextsEqual([DesktopAppearance]::GetThreadDpiAwarenessContext(), [IntPtr](-4)); darkTitleBar = $titleDark; menuBackground = $TrayMenu.BackColor.ToArgb() } | ConvertTo-Json | Set-Content -LiteralPath $env:AIDICT_NATIVE_METRICS
+    }
+    $js = 'window.applyTheme && window.applyTheme(' + $Dark.ToString().ToLowerInvariant() + ', false)'
+    foreach ($view in @($MainBrowser, $MiniBrowser)) {
+        if ($view.CoreWebView2) { $null = $view.ExecuteScriptAsync($js) }
+        $view.DefaultBackgroundColor = $MainForm.BackColor
+    }
+}
+$initialDark = $true
+$appearancePath = Join-Path $UserDir 'appearance.json'
+if (Test-Path -LiteralPath $appearancePath) {
+    try { $initialDark = [bool](Get-Content -LiteralPath $appearancePath -Raw | ConvertFrom-Json).dark } catch {}
+}
+Set-AppTheme $initialDark
 
 function Show-MainWindow {
     if ($MiniForm.Visible) { $MiniForm.Hide() }
@@ -259,6 +293,13 @@ $MainForm.Add_FormClosing({
     }
 })
 
+if ($env:AIDICT_NATIVE_METRICS) {
+    $MainForm.Add_Shown({
+        $dark = 0
+        $null = [DesktopAppearance]::DwmGetWindowAttribute($MainForm.Handle, 20, [ref]$dark, 4)
+        @{ dpi = [DesktopAppearance]::GetDpiForWindow($MainForm.Handle); perMonitorV2 = [DesktopAppearance]::AreDpiAwarenessContextsEqual([DesktopAppearance]::GetThreadDpiAwarenessContext(), [IntPtr](-4)); darkTitleBar = $dark } | ConvertTo-Json | Set-Content -LiteralPath $env:AIDICT_NATIVE_METRICS
+    })
+}
 try { [System.Windows.Forms.Application]::Run($MainForm) }
 finally {
     $NotifyIcon.Dispose()

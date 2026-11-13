@@ -4,10 +4,10 @@ AI Dictionary — Cross-Platform Installer Builder (`scripts/build_installers.py
 Generates:
 1. macOS Native `.icns` & Windows `.ico` icons from our custom vector logo.
 2. macOS Universal Binary (`arm64` + `x86_64`) `AI Dictionary.app` bundle (`WKWebView` native shell + 14,625-entry offline `dictionary.db` + native `Vision` OCR / `Accessibility` bridge), signed with `codesign`.
-3. `dist/installers/AI-Dictionary-1.0.1-macOS-arm64.dmg`
-4. `dist/installers/AI-Dictionary-1.0.1-macOS-x64.dmg`
-5. `dist/installers/AI-Dictionary-1.0.1-macOS-Universal.pkg`
-6. `dist/installers/AI-Dictionary-1.0.1-Windows-x64-Setup.zip` (with `Install-Windows.ps1`, `Uninstall-Windows.ps1`, `Start-AIDictionary.bat`, `icon.ico`, and `.github/workflows/build-installers.yml` for signed MSI/NSIS builds).
+3. `dist/installers/AI-Dictionary-1.0.2-macOS-arm64.dmg`
+4. `dist/installers/AI-Dictionary-1.0.2-macOS-x64.dmg`
+5. `dist/installers/AI-Dictionary-1.0.2-macOS-Universal.pkg`
+6. `dist/installers/AI-Dictionary-1.0.2-Windows-x64-Setup.zip` (with `Install-Windows.ps1`, `Uninstall-Windows.ps1`, `Start-AIDictionary.bat`, `icon.ico`, and `.github/workflows/build-installers.yml` for signed MSI/NSIS builds).
 7. `dist/installers/SHA256SUMS.txt`
 """
 
@@ -157,9 +157,9 @@ def build_macos_app_bundle(icns_path: Path, arch_mode: str = "universal") -> Pat
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.1</string>
+    <string>1.0.2</string>
     <key>CFBundleVersion</key>
-    <string>101</string>
+    <string>102</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>NSHighResolutionCapable</key>
@@ -216,7 +216,7 @@ def build_macos_pkg(app_dir: Path, pkg_path: Path) -> None:
             "--identifier",
             "com.aidictionary.desktop.pkg",
             "--version",
-            "1.0.1",
+            "1.0.2",
             str(pkg_path),
         ]
     )
@@ -235,6 +235,7 @@ def build_windows_installer_bundle(ico_path: Path, out_zip_path: Path) -> None:
     shutil.copy2(ico_path, win_staging / "app" / "icon.ico")
     shutil.copy2(ROOT_DIR / "scripts" / "run_local_server.py", win_staging / "app" / "scripts" / "run_local_server.py")
     shutil.copy2(ROOT_DIR / "scripts" / "windows_tray_shell.ps1", win_staging / "app" / "scripts" / "windows_tray_shell.ps1")
+    shutil.copy2(ROOT_DIR / "scripts" / "windows_appearance.cs", win_staging / "app" / "scripts" / "windows_appearance.cs")
     shutil.copy2(ROOT_DIR / "data" / "dictionary.db", win_staging / "app" / "data" / "dictionary.db")
     clean_user_database(win_staging / "app" / "data" / "user_data.db")
     shutil.copytree(DIST_DIR / "backend" / "AIDictionaryServer", win_staging / "app" / "backend")
@@ -287,8 +288,8 @@ Write-Host "[OK] AI Dictionary has been completely uninstalled." -ForegroundColo
 
     nsis_script = r"""; AI Dictionary v1.0 — NSIS Windows x64 Installer Script
 !define APP_NAME "AI Dictionary"
-!define APP_VERSION "1.0.1"
-OutFile "AI-Dictionary-1.0.1-Windows-x64-Setup.exe"
+!define APP_VERSION "1.0.2"
+OutFile "AI-Dictionary-1.0.2-Windows-x64-Setup.exe"
 InstallDir "$LOCALAPPDATA\Programs\AI Dictionary"
 Icon "app\icon.ico"
 RequestExecutionLevel user
@@ -362,7 +363,7 @@ if __name__ == "__main__":
     INSTALLERS_DIR.mkdir(parents=True, exist_ok=True)
     build_backend()
     if args.platform == "windows":
-        build_windows_installer_bundle(ICONS_DIR / "icon.ico", INSTALLERS_DIR / "AI-Dictionary-1.0.1-Windows-x64-Setup.zip")
+        build_windows_installer_bundle(ICONS_DIR / "icon.ico", INSTALLERS_DIR / "AI-Dictionary-1.0.2-Windows-x64-Setup.zip")
     else:
         # Build the bridge for the same architecture as the packaged runtime.
         target = "arm64" if args.arch == "arm64" else "x86_64"
@@ -376,6 +377,6 @@ if __name__ == "__main__":
             if "AIDICT_NATIVE_SMOKE_PASS" not in smoke.stdout:
                 raise RuntimeError("Native macOS smoke failed: " + smoke.stdout + smoke.stderr)
             print(smoke.stdout)
-        build_macos_dmg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.1-macOS-{args.arch}.dmg", "AI Dictionary 1.0.1")
-        build_macos_pkg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.1-macOS-{args.arch}.pkg")
+        build_macos_dmg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.2-macOS-{args.arch}.dmg", "AI Dictionary 1.0.2")
+        build_macos_pkg(app, INSTALLERS_DIR / f"AI-Dictionary-1.0.2-macOS-{args.arch}.pkg")
     write_checksums()

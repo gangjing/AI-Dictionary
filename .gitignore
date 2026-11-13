@@ -20,6 +20,7 @@ dist/pyinstaller-work/
 dist/*.spec
 dist/*.nupkg
 dist/test-results/
+dist/build-tools/
 dist/installers/*1.0.1*
 
 # Intermediate staging directories in dist/ (keep dist/installers/ tracked)
@@ -29,3 +30,5 @@ dist/windows-x64-staging/
 dist/macos-arm64/
 dist/macos-x64/
 dist/macos-universal/
+
+dist/installers/*1.0.2*
