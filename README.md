@@ -97,6 +97,7 @@ powershell.exe -NoProfile -STA -ExecutionPolicy Bypass `
 ## 文档索引
 
 - [产品需求文档 (AI_Dictionary_PRD_v1.0.md)](AI_Dictionary_PRD_v1.0.md)
+- [macOS 开发、测试与修复手册（DeepSeek Harness）](docs/MACOS_HARNESS_GUIDE.md)
 - [1.0.5 构建与验证记录](docs/RELEASE_1.0.5.md)
 - [数据与模型许可证台账](docs/DATA_LICENSE_LEDGER.md)
 - [1.0.1 代码检查与修复记录](docs/BUG_REVIEW_1.0.1.md)
