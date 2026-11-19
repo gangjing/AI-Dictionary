@@ -71,7 +71,9 @@ cd ~/Developer
 git clone https://github.com/gangjing/AI-Dictionary.git
 cd AI-Dictionary
 git fetch --tags
-git checkout v1.0.5
+git checkout main
+# main 当前 = v1.0.5 代码 + 本手册。
+# 严格复现 Release 时可改用：git checkout v1.0.5
 ```
 
 ### 3.2 需要 token 时（不要把 token 写进文件）
@@ -84,7 +86,9 @@ unset GH_TOKEN
 cd AI-Dictionary
 git remote set-url origin https://github.com/gangjing/AI-Dictionary.git
 git fetch --tags
-git checkout v1.0.5
+git checkout main
+# main 当前 = v1.0.5 代码 + 本手册。
+# 严格复现 Release 时可改用：git checkout v1.0.5
 ```
 
 确认基线：
