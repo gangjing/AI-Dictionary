@@ -21,6 +21,7 @@ import tempfile
 import time
 import hashlib
 import os
+import platform
 import shutil
 import struct
 import subprocess
@@ -438,6 +439,19 @@ if __name__ == "__main__":
         parser.error("macOS builds require a macOS runner with Xcode command line tools")
     if args.platform == "windows" and sys.platform != "win32":
         parser.error("Windows backend builds require a Windows runner")
+    if args.platform == "macos":
+        # PyInstaller cannot cross-compile the Python backend: the packaged
+        # AIDictionaryServer always matches the interpreter running this script. An
+        # ``--arch x64`` run under an arm64 Python would silently ship an arm64
+        # backend inside an x86_64 shell, so fail fast with actionable guidance.
+        required = "arm64" if args.arch == "arm64" else "x86_64"
+        interpreter_arch = platform.machine()
+        if interpreter_arch != required:
+            parser.error(
+                f"--arch {args.arch} needs a {required} Python interpreter, but this one is "
+                f"{interpreter_arch}. Build arm64 with a native arm64 Python and x64 on an "
+                "Intel Mac (or with an x86_64/Rosetta Python); PyInstaller cannot cross-compile."
+            )
     INSTALLERS_DIR.mkdir(parents=True, exist_ok=True)
     build_backend()
     if args.platform == "windows":

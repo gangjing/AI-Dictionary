@@ -385,6 +385,12 @@ curl -s http://127.0.0.1:14205/api/translate/status | python3 -m json.tool
 # llama-server 日志
 tail -n 80 "$HOME/Library/Application Support/AIDictionary/llama-server.log"
 
+# 原生壳诊断日志（启动、热键注册结果、OCR 耗时、剪贴板事件、权限拒绝）
+tail -n 80 "$HOME/Library/Application Support/AIDictionary/native.log"
+
+# 原生自测结果（--self-test 时写入）
+cat "$HOME/Library/Application Support/AIDictionary/aidict-selftest-result.txt"
+
 # 端口/进程
 lsof -nP -iTCP:14205 -sTCP:LISTEN
 pgrep -fl "AIDictionary|llama-server"
@@ -423,6 +429,11 @@ log show --last 10m --predicate 'process == "AIDictionary"' --style compact
 | 剪贴板取词弹旧内容 | 启用时未同步当前内容 | 启用时先记录 `changeCount`/当前字符串 |
 | OCR 无结果 | 屏幕录制权限、选区太小、语言包 | 先授权；放大选区；检查 `VNRecognizeTextRequest` 支持语言 |
 | Intel 上 OCR 英文都不识别 | Vision 语言模型缺失 | 用 `supportedRecognitionLanguages` 过滤并回退 `en-US` |
+| 第一次截图识别要等很久（约 30 秒） | Vision 首次加载识别模型 | 1.0.5 补丁已在启动时后台预热；仍慢可看 `native.log` 的 `vision warm-up` 耗时 |
+| 构建时 `--self-test` 报 `ocr.vision=fail` | 首次 OCR 冷启动超过固定等待 | 已改为轮询（≤90 秒）；确认用的是最新 `macos_app_shell.swift` |
+| 退出应用后 `llama-server` 还在跑 | 后端未收到 SIGTERM 清理 | 已加 SIGTERM/SIGHUP 处理；`pgrep -fl llama-server` 可确认 |
+| 菜单栏图标右键没反应 | `performClick` 重入 | 已改为 `NSMenu.popUp`；仍异常看 `native.log` |
+
 | 翻译很慢 | Q6/CPU、模型未预加载 | 换 Q4_K_M；点“预加载模型”；Apple Silicon 确认 `-ngl 99` |
 | 翻译不可用 | 模型未下载、llama-server 路径/启动失败 | 查 `llama-server.log`；检查模型 registry 与 `llama/llama-server` |
 | App 打不开/Gatekeeper | 未公证、隔离属性 | 右键打开；必要时 `xattr -dr com.apple.quarantine` |

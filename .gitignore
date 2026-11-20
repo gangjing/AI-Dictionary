@@ -15,3 +15,9 @@ data/*.db-wal
 # Build outputs / installers are local artifacts
 dist/
 node_modules/
+
+# Local Python virtualenv used by the build/test instructions
+.venv/
+
+# Compiled macOS native bridge (rebuilt by scripts/build_installers.py)
+data/macos_native_bridge

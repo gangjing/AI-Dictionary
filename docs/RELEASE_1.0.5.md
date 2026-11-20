@@ -236,3 +236,78 @@ macOS 端已实现对应代码路径：
 | `AI-Dictionary-1.0.5-macOS-x64.pkg` | 47,016,295 | `f7b9501f14c39e54ced4afafbd495ae3591dd48fa76dba94be960e3e6c107065` |
 
 macOS 产物由 GitHub Actions（`macos-26` arm64 / `macos-15-intel` x64）构建；构建过程包含真实的 WKWebView `--smoke-test`。CI 与 Windows 安装包均通过。产物因当前 PAT 缺少 `workflow` scope，CI 上传时使用了兼容的 `1.0.2` 文件名，下载后已重命名为 1.0.5。
+
+---
+
+## 6. macOS 真机修复（1.0.5 补丁，未改版本号）
+
+在真实 Mac（macOS 27.0.1，Apple Silicon M 系列，Xcode CLT/Swift 6.4）上执行
+`python scripts/build_installers.py --platform macos --arch arm64` 时，`--smoke-test` 通过，
+但内置 `--self-test` 失败：
+
+```text
+AIDICT_MAC_SELFTEST_FAIL hotkeys=ok(registered=3); popup.visible=ok; popup.inside=ok(frame=430x560);
+popup.inject=ok(chars=28); popup.hiddenAfterRestore=ok; clipboard.popup=ok; clipboard.inject=ok;
+ocr.vision=fail(lines=0); selection=skipped(no accessibility)
+```
+
+CI 的 macOS runner 未复现，原因是首次 Vision 请求的冷启动耗时取决于机器状态。
+
+### 6.1 根因
+
+`scripts/macos_app_shell.swift` 的 OCR 自测在启动 `VNRecognizeTextRequest` 后**固定等待 5 秒**
+再断言。实测本机第一次 Vision 文字识别耗时 **29.7 秒**（macOS 需要加载识别模型/编译 ANE 图），
+之后同一进程内约 70–120 ms。所以 OCR 本身正常（识别出 1 行），只是断言等待时间不够。
+其它机器上 5 秒可能刚好够，导致"有时过、有时不过"的假失败。
+
+### 6.2 修复（`scripts/macos_app_shell.swift`）
+
+1. **自测改为轮询**：最多等待 90 秒，每 250 ms 检查一次 OCR 页面渲染出的行数；若 OCR 明确返回 0 行则立即失败，不再依赖固定 5 秒。
+2. **启动时后台预热 Vision**（正常启动才预热，`--smoke-test` / `--self-test` 跳过以保持计时稳定），用户第一次「框选截图识别」不再看起来像卡死。
+3. **多显示器 OCR 坐标**：原实现用「所有屏幕并集的 `maxY`」翻转 Cocoa→Quartz 坐标，副屏位于主屏上方/下方时会截到错误区域；改为按**主屏高度**翻转，并对选区做屏幕裁剪与明确报错。
+4. **`popup.inside` 自测**改用面板实际所在屏幕的 `visibleFrame`（原用 `NSScreen.main`，鼠标在副屏时误判失败）。
+5. **点击本应用窗口/迷你窗/菜单栏时自动关闭悬浮结果面板**（清单 M-10：弹窗不得盖住输入框）。
+6. **关闭主窗口到菜单栏时同时关闭迷你窗**（与 Windows `Hide-MiniWindow` 一致）。
+7. **托盘左键动作读取 `tray_click_action`**（与 Windows 一致）；右键菜单改用 `NSMenu.popUp` 直接弹出，避免 `performClick` 重入导致菜单无响应。
+8. **AX 划词向上遍历 5 层父元素**，并在每一层检查 `AXSecureTextField`，提升 Chrome/Safari/Word 等应用取词成功率，同时保持密码框拦截。
+9. **OCR 取消（Esc）** 只在主窗口原本可见时恢复主窗口（与 Windows `$wasVisible` 一致）。
+10. **热键重复注册抑制**：三个 WebView 在页面加载时都会发送 `updateHotkeys`，原实现每次都注销再注册，存在瞬时失败窗口；现在组合键未变化时直接跳过。
+11. **诊断日志 `native.log`**（对齐 Windows `Write-Diagnostic`）：记录启动、后端 PID、热键注册结果、OCR 耗时、剪贴板事件、权限拒绝、自测结果等。
+12. **自测结果落盘** `aidict-selftest-result.txt`，并在退出前回收后端进程（避免占用 14205 端口）。
+
+### 6.3 共享代码与构建脚本
+
+- `scripts/run_local_server.py`：安装 `SIGTERM/SIGINT/SIGHUP` 处理，退出时停止 `llama-server` 子进程。此前 macOS 上退出应用后 `llama-server` 会残留（占用 1–2 GB 内存与端口）。Windows 由 `taskkill /T` 处理整棵进程树，行为不变。
+- `src/index.html`：`loadHistory()` 把后端 `privacy_mode` 同步给原生壳，修复菜单栏/托盘「私密模式」勾选状态过期（两端共享逻辑）。
+- `scripts/verify_acceptance.py`：从仓库 `data/macos_native_bridge` 显式设置 `AIDICT_NATIVE_BRIDGE`。此前数据目录指向临时目录，导致 macOS 原生检查永远 SKIP，无法真正验证 AC-03/AC-04。
+- `scripts/build_installers.py`：增加解释器架构校验。PyInstaller 无法交叉打包，`--arch x64` 在 arm64 Python 下会产出「x64 外壳 + arm64 后端」的坏包；现在直接报错并提示在 Intel Mac 或 x86_64/Rosetta Python 下构建。
+
+### 6.4 验证结果（本机 macOS 27 / arm64）
+
+```text
+AIDICT_NATIVE_SMOKE_PASS
+AIDICT_MAC_SELFTEST_PASS hotkeys=ok(registered=3); popup.visible=ok; popup.inside=ok(frame=430x560);
+popup.inject=ok(chars=28); popup.hiddenAfterRestore=ok; clipboard.popup=ok; clipboard.inject=ok;
+ocr.vision=ok(lines=1); selection=skipped(no accessibility)
+```
+
+- `test_regressions.py`：10 项通过；`test_desktop_ui.py`：Chromium + WebKit、100/125/150/200% 通过。
+- `verify_acceptance.py`：**18 项通过、0 SKIP**（含 `AC-03 native secure-field guard`、`AC-04 native Vision OCR`）。
+- DMG 挂载后校验：`.app` 可执行文件 SHA256 与构建目录一致，ad-hoc 签名，`--smoke-test` 通过。
+- `selection=skipped(no accessibility)`：从终端启动的 ad-hoc 应用没有辅助功能授权，属预期跳过；装到 `/Applications` 并按第 8 节授权后执行 `bash scripts/macos_doctor.sh --self-test` 可验证 AX 划词。
+
+### 6.5 仍未在真机覆盖
+
+- macOS 13/14 的运行时验证（本机为 27，deployment target 13.0）；
+- Intel Mac 的 x64 安装包需在 Intel Mac 或 x86_64 Python 下构建（CI 的 `macos-15-intel` 覆盖）；本机 arm64 只能验证 x64 Swift 外壳可交叉编译。
+- 真实屏幕录制权限下的选区截图、多显示器/全屏 Space 跨应用取词仍需人工按第 9 节清单执行。
+
+本机（macOS 27 / arm64）重建产物校验值（与第 5 节 CI 产物不同，仅用于本机复现）：
+
+| 文件 | SHA256 |
+|---|---|
+| `AI-Dictionary-1.0.5-macOS-arm64.dmg` | `2d05076e89cb9910b293d857cad5d2d37534964302eb40215cbde09235c8d967` |
+| `AI-Dictionary-1.0.5-macOS-arm64.pkg` | `558f2b442b836ea73812a0c339e2be069eb1ea2fd810045516244f210866e36d` |
+
+DMG 挂载后 `Contents/MacOS/AIDictionary` 的 SHA256 与构建目录一致
+（`06836ff875526a2f504892eb29e6af6f304d7eab482b805cfafbb0ce33999a51`），ad-hoc 签名，从挂载卷直接 `--smoke-test` 通过。

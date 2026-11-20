@@ -22,6 +22,14 @@ for name in ('dictionary.db', 'user_data.db'):
     shutil.copy2(ROOT / 'data' / name, Path(TEMP.name) / name)
 os.environ['AIDICT_DATA_DIR'] = TEMP.name
 os.environ['AIDICT_USER_DATA_DIR'] = TEMP.name
+# The native bridge is built next to the repository data by
+# scripts/build_installers.py. Point the backend at it explicitly: DATA_DIR is the
+# temporary database dir here, so the default lookup path would never find it and the
+# macOS native checks would always report SKIP even after a real build.
+if 'AIDICT_NATIVE_BRIDGE' not in os.environ:
+    bridge_candidate = ROOT / 'data' / 'macos_native_bridge'
+    if bridge_candidate.is_file():
+        os.environ['AIDICT_NATIVE_BRIDGE'] = str(bridge_candidate)
 sys.path.insert(0, str(ROOT / 'scripts'))
 import run_local_server as srv
 

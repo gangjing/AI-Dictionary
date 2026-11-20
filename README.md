@@ -1,3 +1,5 @@
+> **1.0.5 补丁：** 在真实 Mac（macOS 27 / Apple Silicon）上定位并修复了 `--self-test` 的 `ocr.vision` 假失败：首次 Vision 识别冷启动约 30 秒，而自测只等 5 秒。现改为轮询等待（≤90 秒）并在启动时后台预热模型；同时修复多显示器 OCR 坐标翻转、副屏弹窗边界误判、点击本应用不关闭悬浮窗、菜单栏右键菜单、AX 划词父级遍历、退出后 `llama-server` 残留等问题。`verify_acceptance.py` 现在会真正执行 macOS 原生检查（18 项通过、0 SKIP）。详见 [docs/RELEASE_1.0.5.md](docs/RELEASE_1.0.5.md) 第 6 节。
+>
 > **1.0.5 更新：** 以 Windows 1.0.4 为模板补齐 macOS：托盘恢复弹窗边界/置顶、主窗口隐藏时关闭弹窗、全局热键、剪贴板取词、AX 划词、Vision OCR 与面板注入全部加入原生自测；macOS CI 在 arm64 / x64 上通过 `--smoke-test` 与 `--self-test`。Apple Silicon 启用 Metal（`-ngl 99`），Intel Mac 回退 CPU（`-ngl 0`），并保留物理核心、Flash Attention、mlock/预加载等速度优化。Windows 安装包与 macOS DMG/PKG 均已重建。
 
 <p align="center">

@@ -13,6 +13,7 @@ import os
 import platform
 import re
 import shutil
+import signal
 import socket
 import sqlite3
 import subprocess
@@ -1729,11 +1730,34 @@ class DictionaryRequestHandler(BaseHTTPRequestHandler):
         self._send_json({"error": "Not found"}, status=404)
 
 
+def _install_shutdown_handlers() -> None:
+    """Stop the llama-server child when the native shell terminates us.
+
+    SIGTERM skips ``finally`` blocks in CPython, so on macOS quitting AI Dictionary
+    used to leave a 1-2 GB llama-server process (and its port) behind. The Windows
+    shell kills the whole process tree itself; installing this handler changes
+    nothing there but keeps both platforms consistent.
+    """
+    def _handle(signum, frame):
+        _stop_llama_server()
+        os._exit(0)
+
+    for name in ("SIGTERM", "SIGINT", "SIGHUP"):
+        sig = getattr(signal, name, None)
+        if sig is None:
+            continue
+        try:
+            signal.signal(sig, _handle)
+        except (ValueError, OSError, RuntimeError):
+            pass
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=int(os.environ.get("PORT", "1420")))
     port = parser.parse_args().port
     ensure_model_schema()
+    _install_shutdown_handlers()
     server = ThreadingHTTPServer(("127.0.0.1", port), DictionaryRequestHandler)
     print(f"[AI Dictionary] Local RPC & UI Server listening on http://127.0.0.1:{port}", flush=True)
     try:

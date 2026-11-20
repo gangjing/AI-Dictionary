@@ -2226,6 +2226,8 @@
       const res = await fetch('/api/history');
       const data = await res.json();
       document.getElementById('privacyModeSwitch').checked = data.privacy_mode;
+      // Keep the native tray/menu-bar checkmark in sync with the persisted backend state.
+      postToNativeShell({ action: 'syncState', privacy_mode: !!data.privacy_mode });
       const tbody = document.getElementById('historyGridBody');
       if (!data.items.length) {
         tbody.innerHTML = `<tr><td colspan="4" style="color:var(--text-sub); padding:20px;">暂无历史记录。</td></tr>`;

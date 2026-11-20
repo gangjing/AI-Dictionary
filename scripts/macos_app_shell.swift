@@ -149,6 +149,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
     var selfTestStarted = false
     var selfTestFailed = false
     var selfTestResults: [String] = []
+    var selfTestOcrDeliveredLines: Int?
+    var mainWindowVisibleBeforeOcr = false
     let serverPort = 14205
 
     var closeToTray: Bool = true
@@ -157,6 +159,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
     var clipboardCaptureEnabled: Bool = false
     var clipboardFallbackEnabled: Bool = true
     var privacyModeEnabled: Bool = false
+    var trayClickAction: String = "mini_popover"
+
+    /// Writable user-data directory (same one the backend uses). Overridable for tests.
+    let userDataDir: URL = {
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        if let override = ProcessInfo.processInfo.environment["AIDICT_USER_DATA_DIR"], !override.isEmpty {
+            return URL(fileURLWithPath: override, isDirectory: true)
+        }
+        return support.appendingPathComponent("AIDictionary", isDirectory: true)
+    }()
+
+    private static let logFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
+
+    private static let logQueue = DispatchQueue(label: "com.aidictionary.native.log")
 
     var hotKeyRefs: [EventHotKeyRef?] = []
     var hotKeyHandler: EventHandlerRef?
@@ -172,6 +192,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
     var ocrOverlay: OcrOverlayWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        try? FileManager.default.createDirectory(at: userDataDir, withIntermediateDirectories: true)
+        writeDiagnostic("launch pid=\(ProcessInfo.processInfo.processIdentifier) smoke=\(smokeTest) selftest=\(selfTest) arch=\(MacShell.architecture) macos=\(ProcessInfo.processInfo.operatingSystemVersionString)")
         startBackendDaemon()
         setupMainMenu()
         setupMainWindow()
@@ -180,7 +202,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
         setupHotkeys()
         setupClipboardMonitor()
         setupDismissMonitors()
-        waitForServerAndLoad(retries: 150)
+        // The first Vision request on a cold machine can take ~30 s while the system loads
+        // its recognition models. Warm it up in the background so the first real capture
+        // does not look like a hang. Build/CI self-tests skip this to keep timings stable.
+        if !selfTest && !smokeTest {
+            warmUpVision()
+        }
+        waitForServerAndLoad(retries: 300)
     }
 
     func setupMainMenu() {
@@ -335,6 +363,44 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
         statusMenu.addItem(quitItem)
     }
 
+    // MARK: - Diagnostics / Vision warm-up
+
+    /// Mirror of the Windows shell's `Write-Diagnostic`: a small, append-only log in the
+    /// user data directory so macOS issues can be diagnosed after the fact.
+    func writeDiagnostic(_ message: String) {
+        let line = "\(Self.logFormatter.string(from: Date())) \(message)\n"
+        let url = userDataDir.appendingPathComponent("native.log")
+        guard let data = line.data(using: .utf8) else { return }
+        // Called from the main thread and from OCR/Vision background queues.
+        Self.logQueue.sync {
+            if let handle = try? FileHandle(forWritingTo: url) {
+                handle.seekToEndOfFile()
+                handle.write(data)
+                try? handle.close()
+            } else {
+                try? data.write(to: url, options: .atomic)
+            }
+        }
+    }
+
+    /// Load the Vision text-recognition models once, off the main thread.
+    func warmUpVision() {
+        DispatchQueue.global(qos: .utility).async {
+            let started = CFAbsoluteTimeGetCurrent()
+            guard let image = OcrSupport.tinyProbeImage() else { return }
+            let request = VNRecognizeTextRequest()
+            request.recognitionLevel = .accurate
+            request.usesLanguageCorrection = false
+            request.recognitionLanguages = OcrSupport.preferredLanguages()
+            let handler = VNImageRequestHandler(cgImage: image, options: [:])
+            try? handler.perform([request])
+            let elapsed = Int((CFAbsoluteTimeGetCurrent() - started) * 1000)
+            DispatchQueue.main.async {
+                self.writeDiagnostic("vision warm-up finished in \(elapsed) ms")
+            }
+        }
+    }
+
     // MARK: - Hotkeys
 
     func setupHotkeys() {
@@ -354,6 +420,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
     }
 
     func registerHotkeys(lookup: String, ocr: String, main: String) {
+        // Every web view posts `updateHotkeys` on page load, so this runs several times at
+        // startup. Re-registering identical combos briefly releases them, which can fail
+        // under contention; only re-register when something actually changed.
+        if hotKeyRefs.count == 3, lookup == lookupHotkey, ocr == ocrHotkey, main == mainHotkey {
+            return
+        }
         for ref in hotKeyRefs {
             if let ref = ref { UnregisterEventHotKey(ref) }
         }
@@ -364,6 +436,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
         let lookupOK = registerHotkey(lookup, id: 1)
         let ocrOK = registerHotkey(ocr, id: 2)
         let mainOK = registerHotkey(main, id: 3)
+        writeDiagnostic("hotkeys lookup=\(lookup):\(lookupOK) ocr=\(ocr):\(ocrOK) main=\(main):\(mainOK)")
         if !lookupOK {
             notify(title: "划词热键注册失败", message: "\(lookup) 可能已被其他应用占用，请在设置中更换组合键。")
         }
@@ -421,14 +494,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
         guard let text = pasteboard.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
               !text.isEmpty else { return }
         guard text != lastSelectionText else { return }
-        if NSApp.isActive && (resultPanel?.isVisible == true || window?.isVisible == true) { return }
+        // Ignore copies performed inside this app (same rule as the Windows ClipboardWatcher).
+        if NSApp.isActive && (resultPanel?.isVisible == true || window?.isVisible == true || popover?.isShown == true) {
+            writeDiagnostic("clipboard change ignored: own window is active")
+            return
+        }
         let appName = NSWorkspace.shared.frontmostApplication?.localizedName ?? ""
+        writeDiagnostic("clipboard change chars=\(text.count) app=\(appName)")
         showResult(text: String(text.prefix(5000)), source: "clipboard", app: appName, method: "clipboard")
     }
 
     func setupDismissMonitors() {
         NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             self?.resultPanel?.orderOut(nil)
+        }
+        // Clicks inside our own app (main window, mini popover, status menu) must also
+        // dismiss the floating result panel, otherwise it can cover the search input (M-10).
+        NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            guard let self = self, let panel = self.resultPanel, panel.isVisible else { return event }
+            if event.window !== panel {
+                panel.orderOut(nil)
+            }
+            return event
         }
         NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
             if event.keyCode == 53 {
@@ -481,32 +568,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
             return
         }
         let element = focused as! AXUIElement
-        let role = axAttribute(element, kAXRoleAttribute) as? String
-        let subrole = axAttribute(element, kAXSubroleAttribute) as? String
-        if subrole == "AXSecureTextField" {
+        let selection = probeSelection(from: element)
+        if selection.secure {
             NSSound.beep()
             notify(title: "已阻止读取密码框", message: "当前焦点是安全输入框，不会读取文本，也不会使用剪贴板回退。")
+            writeDiagnostic("selection: blocked secure input role=\(selection.role ?? "?") app=\(appName)")
             return
         }
-        if let text = axAttribute(element, kAXSelectedTextAttribute) as? String, !text.isEmpty {
-            showResult(text: String(text.prefix(5000)), source: "selection", app: appName, method: "ax")
+        if let text = selection.text, !text.isEmpty {
+            writeDiagnostic("selection: ax chars=\(text.count) depth=\(selection.depth) app=\(appName)")
+            showResult(
+                text: String(text.prefix(5000)),
+                source: "selection",
+                app: appName,
+                method: selection.depth == 0 ? "ax" : "ax_parent"
+            )
             return
         }
-        // Some apps expose the selection on a parent element.
-        if let parentValue = axAttribute(element, kAXParentAttribute) {
-            let parent = parentValue as! AXUIElement
-            if let text = axAttribute(parent, kAXSelectedTextAttribute) as? String, !text.isEmpty {
-                showResult(text: String(text.prefix(5000)), source: "selection", app: appName, method: "ax_parent")
-                return
-            }
-        }
-        _ = role
+        writeDiagnostic("selection: no AX text role=\(selection.role ?? "?") app=\(appName); trying fallback")
         tryClipboardFallback(appName: appName, bundleId: bundleId)
     }
 
     func tryClipboardFallback(appName: String, bundleId: String) {
         let terminalBundles = ["com.apple.Terminal", "com.googlecode.iterm2", "dev.warp.Warp-Stable", "io.alacritty", "net.kovidgoyal.kitty"]
         if terminalBundles.contains(bundleId) {
+            writeDiagnostic("selection: terminal app \(bundleId) refuses clipboard fallback")
             notify(title: "终端窗口不支持安全复制回退", message: "在终端中发送 Command+C 可能被解释为中断命令；请手动复制后使用剪贴板取词。")
             return
         }
@@ -515,8 +601,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
             return
         }
         if let text = clipboardFallback() {
+            writeDiagnostic("selection: clipboard fallback chars=\(text.count) app=\(appName)")
             showResult(text: text, source: "selection", app: appName, method: "clipboard")
         } else {
+            writeDiagnostic("selection: clipboard fallback returned nothing app=\(appName)")
             notify(title: "没有读到选中文本", message: "部分应用禁止自动复制。请先在目标应用中选中文字，或手动复制后使用剪贴板取词。")
         }
     }
@@ -574,18 +662,41 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
         var focusedValue: CFTypeRef?
         guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedValue) == .success,
               let focusedValue = focusedValue else { return nil }
-        let element = focusedValue as! AXUIElement
-        if (axAttribute(element, kAXSubroleAttribute) as? String) == "AXSecureTextField" { return nil }
-        if let text = axAttribute(element, kAXSelectedTextAttribute) as? String, !text.isEmpty {
-            return text
-        }
-        if let parentValue = axAttribute(element, kAXParentAttribute) {
-            let parent = parentValue as! AXUIElement
-            if let text = axAttribute(parent, kAXSelectedTextAttribute) as? String, !text.isEmpty {
-                return text
+        let selection = probeSelection(from: focusedValue as! AXUIElement)
+        guard !selection.secure else { return nil }
+        return selection.text
+    }
+
+    struct AXSelectionProbe {
+        let text: String?
+        let secure: Bool
+        let role: String?
+        let depth: Int
+    }
+
+    /// Walk the focused element and a few ancestors. Some apps expose the selection on a
+    /// parent (web content) and the secure subrole on an ancestor, so check every level.
+    func probeSelection(from element: AXUIElement, maxDepth: Int = 5) -> AXSelectionProbe {
+        var current = element
+        var depth = 0
+        var secure = IsSecureEventInputEnabled().boolValue
+        var focusedRole: String?
+        while depth <= maxDepth {
+            let currentRole = axAttribute(current, kAXRoleAttribute) as? String
+            if depth == 0 { focusedRole = currentRole }
+            if (axAttribute(current, kAXSubroleAttribute) as? String) == "AXSecureTextField" {
+                secure = true
             }
+            if !secure,
+               let text = axAttribute(current, kAXSelectedTextAttribute) as? String,
+               !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return AXSelectionProbe(text: text, secure: false, role: focusedRole, depth: depth)
+            }
+            guard depth < maxDepth, let parentValue = axAttribute(current, kAXParentAttribute) else { break }
+            current = parentValue as! AXUIElement
+            depth += 1
         }
-        return nil
+        return AXSelectionProbe(text: nil, secure: secure, role: focusedRole, depth: 0)
     }
 
     // MARK: - Selection panel
@@ -647,7 +758,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
         }
         if popover.isShown { popover.performClose(nil) }
         resultPanel?.orderOut(nil)
+        mainWindowVisibleBeforeOcr = window?.isVisible ?? false
         window?.orderOut(nil)
+        writeDiagnostic("ocr: region selection started (main window was visible=\(mainWindowVisibleBeforeOcr))")
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
             self.presentOcrOverlay()
         }
@@ -675,9 +788,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
 
         let view = OcrSelectionView(frame: NSRect(origin: .zero, size: union.size))
         view.onCancel = { [weak self] in
-            self?.ocrOverlay?.orderOut(nil)
-            self?.ocrOverlay = nil
-            self?.showMainWindowAction()
+            guard let self = self else { return }
+            self.ocrOverlay?.orderOut(nil)
+            self.ocrOverlay = nil
+            self.writeDiagnostic("ocr: selection cancelled")
+            // Match Windows: only bring the main window back if OCR was started from it.
+            if self.mainWindowVisibleBeforeOcr {
+                self.showMainWindowAction()
+            }
         }
         view.onComplete = { [weak self] rect in
             self?.ocrOverlay?.orderOut(nil)
@@ -695,19 +813,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
 
     func captureAndRecognize(rect: NSRect) {
         let screens = NSScreen.screens
-        guard !screens.isEmpty else { return }
+        guard !screens.isEmpty else {
+            deliverOcrFailure("没有可用的显示器。")
+            return
+        }
         var union = screens[0].frame
         for screen in screens.dropFirst() {
             union = union.union(screen.frame)
         }
-        let quartzRect = CGRect(
-            x: rect.minX,
-            y: union.maxY - rect.maxY,
-            width: rect.width,
-            height: rect.height
-        )
+        let clamped = rect.intersection(union)
+        guard !clamped.isNull, clamped.width >= 4, clamped.height >= 4 else {
+            deliverOcrFailure("选区超出屏幕范围，请重新框选。")
+            return
+        }
+        let quartzRect = OcrSupport.quartzRect(fromScreenRect: clamped)
+        writeDiagnostic("ocr capture cocoa=\(Int(clamped.minX)),\(Int(clamped.minY)) \(Int(clamped.width))x\(Int(clamped.height)) quartz=\(Int(quartzRect.minX)),\(Int(quartzRect.minY))")
         guard let image = CGWindowListCreateImage(quartzRect, .optionOnScreenOnly, kCGNullWindowID, .bestResolution) else {
-            deliverOcrFailure("无法捕获所选屏幕区域。")
+            writeDiagnostic("ocr capture failed: CGWindowListCreateImage returned nil")
+            deliverOcrFailure("无法捕获所选屏幕区域。请确认已在「系统设置 → 隐私与安全性 → 屏幕录制」中授权并重启应用。")
             return
         }
         recognize(image: image)
@@ -716,12 +839,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
     func recognize(image: CGImage) {
         DispatchQueue.global(qos: .userInitiated).async {
             let started = CFAbsoluteTimeGetCurrent()
-            let supported = (try? VNRecognizeTextRequest.supportedRecognitionLanguages(
-                for: .accurate,
-                revision: VNRecognizeTextRequestRevision3
-            )) ?? []
-            var preferred = ["zh-Hans", "zh-Hans-CN", "en-US"].filter { supported.contains($0) }
-            if preferred.isEmpty { preferred = ["en-US"] }
+            let preferred = OcrSupport.preferredLanguages()
+            self.writeDiagnostic("ocr start \(image.width)x\(image.height) languages=\(preferred.joined(separator: ","))")
 
             func performOcr(_ languages: [String]) -> [VNRecognizedTextObservation] {
                 let request = VNRecognizeTextRequest()
@@ -732,9 +851,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
                 do {
                     try handler.perform([request])
                 } catch {
+                    self.writeDiagnostic("ocr perform failed languages=\(languages.joined(separator: ",")) error=\(error.localizedDescription)")
                     return []
                 }
-                return request.results as? [VNRecognizedTextObservation] ?? []
+                return (request.results as [VNRecognizedTextObservation]?) ?? []
             }
 
             var observations = performOcr(preferred)
@@ -764,11 +884,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
             }
             let elapsed = (CFAbsoluteTimeGetCurrent() - started) * 1000
             let text = lines.compactMap { $0["text"] as? String }.joined(separator: "\n")
+            self.writeDiagnostic("ocr done lines=\(lines.count) elapsed=\(Int(elapsed))ms")
             let payload: [String: Any] = [
                 "status": lines.isEmpty ? "empty" : "ok",
                 "text": text,
                 "lines": lines,
-                "language": "zh-Hans + en-US",
+                "language": OcrSupport.languageLabel(preferred),
                 "elapsed_ms": (elapsed * 10).rounded() / 10,
                 "message": lines.isEmpty ? "未在选区中识别到文字，请放大选区或提高清晰度。" : "已识别 \(lines.count) 行文本",
                 "width": image.width,
@@ -792,6 +913,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
     }
 
     func deliverOcr(_ payload: [String: Any]) {
+        let lineCount = (payload["lines"] as? [[String: Any]])?.count ?? 0
+        selfTestOcrDeliveredLines = lineCount
+        writeDiagnostic("ocr deliver status=\(payload["status"] as? String ?? "?") lines=\(lineCount)")
         showMainWindowAction()
         let json = HotkeyParser.jsonString(payload)
         webView.evaluateJavaScript(
@@ -804,19 +928,40 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
 
     @objc func handleStatusBarClick(_ sender: NSStatusBarButton) {
         guard let event = NSApp.currentEvent else {
-            togglePopoverAction()
+            handleLeftStatusClick()
             return
         }
         if event.type == .rightMouseUp || event.modifierFlags.contains(.control) {
             if popover.isShown {
                 popover.performClose(sender)
             }
-            statusItem.menu = statusMenu
-            statusItem.button?.performClick(nil)
-            statusItem.menu = nil
+            showStatusMenu(sender)
+        } else {
+            handleLeftStatusClick()
+        }
+    }
+
+    /// Left click honours the same `tray_click_action` setting as the Windows shell.
+    func handleLeftStatusClick() {
+        if trayClickAction == "main_window" {
+            if popover.isShown { popover.performClose(nil) }
+            showMainWindowAction()
         } else {
             togglePopoverAction()
         }
+    }
+
+    func showStatusMenu(_ sender: NSStatusBarButton) {
+        resultPanel?.orderOut(nil)
+        // Popping the menu up directly avoids re-entering this action through
+        // `performClick`, which can silently do nothing on recent macOS releases.
+        let location = NSPoint(x: 0, y: sender.bounds.height + 4)
+        if statusMenu.popUp(positioning: nil, at: location, in: sender) {
+            return
+        }
+        statusItem.menu = statusMenu
+        sender.performClick(nil)
+        statusItem.menu = nil
     }
 
     @objc func togglePopoverAction() {
@@ -850,8 +995,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
     }
 
     @objc func hideMainWindowToTray() {
-        window.orderOut(nil)
+        if popover.isShown {
+            popover.performClose(nil)
+        }
         resultPanel?.orderOut(nil)
+        window.orderOut(nil)
+        writeDiagnostic("main window hidden to menu bar")
     }
 
     @objc func toggleScreenSelectionAction() {
@@ -1002,6 +1151,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
                 privacyModeEnabled = privacy
                 menuPrivacyItem.state = privacy ? .on : .off
             }
+            if let action = body["tray_click_action"] as? String, action == "main_window" || action == "mini_popover" {
+                trayClickAction = action
+            }
         case "quitApp":
             explicitQuitAction()
         default:
@@ -1024,6 +1176,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
     }
 
     func notify(title: String, message: String) {
+        writeDiagnostic("notify title=\(title) message=\(message)")
         let notification = NSUserNotification()
         notification.title = title
         notification.informativeText = message
@@ -1037,9 +1190,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
         guard let resourcePath = Bundle.main.resourcePath else { return }
         let bundledDataDir = (resourcePath as NSString).appendingPathComponent("app/data")
 
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let userDir = ProcessInfo.processInfo.environment["AIDICT_USER_DATA_DIR"].map { URL(fileURLWithPath: $0) }
-            ?? appSupport.appendingPathComponent("AIDictionary", isDirectory: true)
+        let userDir = userDataDir
         try? FileManager.default.createDirectory(at: userDir, withIntermediateDirectories: true)
 
         let bundledUserDb = URL(fileURLWithPath: bundledDataDir).appendingPathComponent("user_data.db")
@@ -1062,7 +1213,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
         env["AIDICT_NATIVE_BRIDGE"] = (bundledDataDir as NSString).appendingPathComponent("macos_native_bridge")
         env["AIDICT_USER_DATA_DIR"] = userDir.path
         proc.environment = env
-        do { try proc.run() } catch {
+        do {
+            try proc.run()
+            writeDiagnostic("backend started pid=\(proc.processIdentifier) port=\(serverPort) data=\(userDir.path)")
+        } catch {
+            writeDiagnostic("backend failed to start: \(error.localizedDescription)")
             let alert = NSAlert()
             alert.messageText = "AI Dictionary 后端启动失败"
             alert.informativeText = error.localizedDescription
@@ -1107,10 +1262,26 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
     }
 
     func selfTestFinish() {
+        let detail = selfTestResults.joined(separator: "; ")
         let marker = selfTestFailed ? "AIDICT_MAC_SELFTEST_FAIL" : "AIDICT_MAC_SELFTEST_PASS"
-        print("\(marker) " + selfTestResults.joined(separator: "; "))
+        print("\(marker) \(detail)")
         fflush(stdout)
-        if let proc = serverProcess, proc.isRunning { proc.terminate() }
+        // Same artifact the Windows self-test writes, so real-Mac reports are copy/pasteable.
+        try? "\(selfTestFailed ? "FAIL" : "PASS") \(detail)\n".write(
+            to: userDataDir.appendingPathComponent("aidict-selftest-result.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+        if let proc = serverProcess, proc.isRunning {
+            proc.terminate()
+            let deadline = Date().addingTimeInterval(3)
+            while proc.isRunning && Date() < deadline {
+                usleep(50_000)
+            }
+            if proc.isRunning {
+                kill(proc.processIdentifier, SIGKILL)
+            }
+        }
         exit(selfTestFailed ? 1 : 0)
     }
 
@@ -1126,7 +1297,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
         let popupText = "macOS popup self test \(UUID().uuidString.prefix(6))"
         showResult(text: popupText, source: "selection", app: "SelfTest", method: "self-test")
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            let visibleFrame = NSScreen.main?.visibleFrame ?? .zero
+            // Use the screen the panel actually landed on: NSScreen.main is the menu-bar
+            // screen, so a lookup near the cursor on a secondary display used to "fail".
+            let visibleFrame = self.resultPanel.screen?.visibleFrame
+                ?? NSScreen.main?.visibleFrame
+                ?? .zero
             let frame = self.resultPanel.frame
             let inside = frame.minX >= visibleFrame.minX - 1
                 && frame.minY >= visibleFrame.minY - 1
@@ -1167,16 +1342,41 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
 
     func selfTestOcr() {
         guard let image = makeSelfTestOcrImage() else {
-            self.selfTestCheck("ocr.image", false)
-            self.selfTestSelection()
+            selfTestCheck("ocr.image", false)
+            selfTestSelection()
             return
         }
+        selfTestOcrDeliveredLines = nil
+        let deadline = Date().addingTimeInterval(90)
+        writeDiagnostic("selftest: starting OCR")
         recognize(image: image)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
-            self.webView.evaluateJavaScript("document.querySelectorAll('.ocr-line-input').length") { value, _ in
-                let count = (value as? Int) ?? Int((value as? Double) ?? 0)
-                self.selfTestCheck("ocr.vision", count > 0, "lines=\(count)")
+        pollSelfTestOcr(deadline: deadline, attempts: 0)
+    }
+
+    /// The first Vision request on a cold machine can take ~30 s while macOS loads the
+    /// recognition models, so poll for the rendered rows instead of using a fixed 5 s
+    /// window (which made `--self-test` fail on real Macs even though OCR worked).
+    func pollSelfTestOcr(deadline: Date, attempts: Int) {
+        if let delivered = selfTestOcrDeliveredLines, delivered == 0 {
+            selfTestCheck("ocr.vision", false, "lines=0")
+            selfTestSelection()
+            return
+        }
+        webView.evaluateJavaScript("document.querySelectorAll('.ocr-line-input').length") { value, _ in
+            let count = (value as? Int) ?? Int((value as? Double) ?? 0)
+            if count > 0 {
+                self.selfTestCheck("ocr.vision", true, "lines=\(count)")
                 self.selfTestSelection()
+                return
+            }
+            if Date() >= deadline {
+                let delivered = self.selfTestOcrDeliveredLines.map(String.init) ?? "none"
+                self.selfTestCheck("ocr.vision", false, "lines=0 delivered=\(delivered) polls=\(attempts)")
+                self.selfTestSelection()
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                self.pollSelfTestOcr(deadline: deadline, attempts: attempts + 1)
             }
         }
     }
@@ -1265,6 +1465,87 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMe
                 self.explicitQuitAction()
             }
         }
+    }
+}
+
+enum MacShell {
+    static var architecture: String {
+        #if arch(arm64)
+        return "arm64"
+        #elseif arch(x86_64)
+        return "x86_64"
+        #else
+        return "unknown"
+        #endif
+    }
+}
+
+enum OcrSupport {
+    /// Vision revisions/languages differ between Intel (English-only models) and
+    /// Apple Silicon; always intersect the request with what this Mac really supports.
+    static func supportedLanguages() -> [String] {
+        (try? VNRecognizeTextRequest.supportedRecognitionLanguages(
+            for: .accurate,
+            revision: VNRecognizeTextRequestRevision3
+        )) ?? []
+    }
+
+    static func preferredLanguages() -> [String] {
+        let supported = supportedLanguages()
+        guard !supported.isEmpty else { return ["en-US"] }
+        var preferred = ["zh-Hans", "zh-Hans-CN", "en-US"].filter { supported.contains($0) }
+        if preferred.isEmpty { preferred = ["en-US"] }
+        return preferred
+    }
+
+    static func languageLabel(_ languages: [String]) -> String {
+        if languages.contains("zh-Hans") && languages.contains("en-US") {
+            return "zh-Hans + en-US"
+        }
+        return languages.joined(separator: " + ")
+    }
+
+    /// Cocoa screen coordinates (origin bottom-left of the primary display) to Quartz
+    /// display coordinates (origin top-left of the primary display). Flipping around the
+    /// *primary* screen's height stays correct when a secondary display sits above, below
+    /// or to the left of the main one; using the union of all screens shifts the capture.
+    static func quartzRect(fromScreenRect rect: NSRect) -> CGRect {
+        let primaryTop = NSScreen.screens.first?.frame.maxY ?? 0
+        return CGRect(
+            x: rect.minX,
+            y: primaryTop - rect.maxY,
+            width: rect.width,
+            height: rect.height
+        )
+    }
+
+    /// Small image used once at launch to load the Vision model in the background.
+    static func tinyProbeImage() -> CGImage? {
+        let width = 96
+        let height = 32
+        guard let ctx = CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+        ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        let nsCtx = NSGraphicsContext(cgContext: ctx, flipped: false)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = nsCtx
+        ("A" as NSString).draw(
+            at: NSPoint(x: 12, y: 4),
+            withAttributes: [
+                .font: NSFont.systemFont(ofSize: 18, weight: .semibold),
+                .foregroundColor: NSColor.black
+            ]
+        )
+        NSGraphicsContext.restoreGraphicsState()
+        return ctx.makeImage()
     }
 }
 
